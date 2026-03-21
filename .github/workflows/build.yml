@@ -5,7 +5,7 @@ on:
     inputs:
       scummvm_version:
         description: 'ScummVM version tag'
-        default: 'v2.9.0'
+        default: 'v2026.1.0'
 
 permissions:
   contents: write

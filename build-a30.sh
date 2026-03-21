@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-SCUMMVM_VERSION="${SCUMMVM_VERSION:-v2.9.0}"
+SCUMMVM_VERSION="${SCUMMVM_VERSION:-v2026.1.0}"
 OUTPUT_DIR="${OUTPUT_DIR:-/output}"
 
 echo "=== Building ScummVM ${SCUMMVM_VERSION} for A30 (armhf) ==="
