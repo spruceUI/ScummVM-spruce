@@ -106,9 +106,9 @@ new = '''\tif (valid) {
 \t\t// coords to pre-rotation coords for setMousePosition.
 \t\t// convertWindowToVirtual handles rotation internally.
 \t\tif (_rotationMode == Common::kRotation270) {
-\t\t\tsetMousePosition((_windowHeight - 1) - mouse.y, mouse.x);
-\t\t} else if (_rotationMode == Common::kRotation90) {
 \t\t\tsetMousePosition(mouse.y, (_windowWidth - 1) - mouse.x);
+\t\t} else if (_rotationMode == Common::kRotation90) {
+\t\t\tsetMousePosition((_windowHeight - 1) - mouse.y, mouse.x);
 \t\t} else {
 \t\t\tsetMousePosition(mouse.x, mouse.y);
 \t\t}
