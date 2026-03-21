@@ -24,27 +24,34 @@ for dir in /patches/common /patches/a30; do
     fi
 done
 
-# Fix mouse input for rotated displays on fbdev (window doesn't rotate,
-# only the rendered output does, so mouse coords need pre-transforming)
+# Fix mouse cursor position for rotated displays on fbdev.
+# The cursor is rendered in pre-rotation (logical) space, so setMousePosition
+# needs transformed coords. But convertWindowToVirtual already handles rotation
+# internally, so it must receive the original physical window coords.
 python3 -c "
 with open('backends/graphics/sdl/sdl-graphics.cpp', 'r') as f:
     code = f.read()
 
-old = '\tmouse.y = (int)(mouse.y * dpiScale + 0.5f);\n\tbool valid = true;'
-new = '''\tmouse.y = (int)(mouse.y * dpiScale + 0.5f);
-\t// Pre-transform mouse from physical to logical space for rotated panels
-\tif (_rotationMode == Common::kRotation270) {
-\t\tint tmp = mouse.x;
-\t\tmouse.x = mouse.y;
-\t\tmouse.y = (_windowWidth - 1) - tmp;
-\t} else if (_rotationMode == Common::kRotation90) {
-\t\tint tmp = mouse.x;
-\t\tmouse.x = (_windowHeight - 1) - mouse.y;
-\t\tmouse.y = tmp;
-\t}
-\tbool valid = true;'''
+old = '''\tif (valid) {
+\t\tsetMousePosition(mouse.x, mouse.y);
+\t\tmouse = convertWindowToVirtual(mouse.x, mouse.y);
+\t}'''
 
-assert old in code, 'Could not find mouse DPI scaling code to patch'
+new = '''\tif (valid) {
+\t\t// Cursor rendering uses pre-rotation (logical) coordinates,
+\t\t// but convertWindowToVirtual expects physical window coords
+\t\t// (it handles the rotation transform internally).
+\t\tif (_rotationMode == Common::kRotation270) {
+\t\t\tsetMousePosition(mouse.y, (_windowWidth - 1) - mouse.x);
+\t\t} else if (_rotationMode == Common::kRotation90) {
+\t\t\tsetMousePosition((_windowHeight - 1) - mouse.y, mouse.x);
+\t\t} else {
+\t\t\tsetMousePosition(mouse.x, mouse.y);
+\t\t}
+\t\tmouse = convertWindowToVirtual(mouse.x, mouse.y);
+\t}'''
+
+assert old in code, 'Could not find setMousePosition/convertWindowToVirtual block to patch'
 code = code.replace(old, new)
 
 with open('backends/graphics/sdl/sdl-graphics.cpp', 'w') as f:
