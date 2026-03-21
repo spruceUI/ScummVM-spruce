@@ -38,20 +38,23 @@ old = '''\tif (valid) {
 \t}'''
 
 new = '''\tif (valid) {
-\t\t// On rotated fbdev displays, cursor rendering uses physical window
-\t\t// coords but input axes are swapped. Scale the rotated coords to
-\t\t// fit the physical window dimensions (e.g. 480x640 for 270 rotation).
-\t\tif (_rotationMode == Common::kRotation270) {
-\t\t\tint cx = mouse.y * _windowWidth / _windowHeight;
-\t\t\tint cy = ((_windowWidth - 1) - mouse.x) * _windowHeight / _windowWidth;
-\t\t\tsetMousePosition(cx, cy);
-\t\t} else if (_rotationMode == Common::kRotation90) {
-\t\t\tint cx = ((_windowHeight - 1) - mouse.y) * _windowWidth / _windowHeight;
-\t\t\tint cy = mouse.x * _windowHeight / _windowWidth;
-\t\t\tsetMousePosition(cx, cy);
-\t\t} else {
-\t\t\tsetMousePosition(mouse.x, mouse.y);
+\t\t// Debug: log window dims and mouse coords to file (temporary)
+\t\t{
+\t\t\tstatic int logCount = 0;
+\t\t\tif (logCount < 200 && logCount % 10 == 0) {
+\t\t\t\tFILE *f = fopen("/mnt/SDCARD/scummvm_mouse_debug.log", "a");
+\t\t\t\tif (f) {
+\t\t\t\t\tfprintf(f, "wW=%d wH=%d mx=%d my=%d drL=%d drT=%d drR=%d drB=%d rot=%d\\n",
+\t\t\t\t\t\t_windowWidth, _windowHeight, mouse.x, mouse.y,
+\t\t\t\t\t\t_activeArea.drawRect.left, _activeArea.drawRect.top,
+\t\t\t\t\t\t_activeArea.drawRect.right, _activeArea.drawRect.bottom,
+\t\t\t\t\t\t(int)_rotationMode);
+\t\t\t\t\tfclose(f);
+\t\t\t\t}
+\t\t\t}
+\t\t\tlogCount++;
 \t\t}
+\t\tsetMousePosition(mouse.x, mouse.y);
 \t\tmouse = convertWindowToVirtual(mouse.x, mouse.y);
 \t}'''
 
