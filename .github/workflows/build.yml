@@ -12,7 +12,7 @@ permissions:
   packages: write
 
 env:
-  IMAGE: ghcr.io/sundownersport/scummvm-builder-a30
+  IMAGE: ghcr.io/spruceui/scummvm-builder-a30
 
 jobs:
   build:
