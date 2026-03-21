@@ -34,10 +34,9 @@ with open('backends/platform/sdl/sdl-window.cpp', 'r') as f:
 old = '''\t\t\tSDL_WarpMouseInWindow(_window, x, y);
 \t\t\treturn true;'''
 
-new = '''\t\t\tSDL_WarpMouseInWindow(_window, x, y);
-\t\t\t// On fbdev, SDL_WarpMouseInWindow may not generate a correct
-\t\t\t// motion event (Y coordinate stays stale). Push a synthetic
-\t\t\t// one to ensure the position is always updated.
+new = '''\t\t\t// Skip SDL_WarpMouseInWindow on fbdev — it generates motion
+\t\t\t// events with a stale Y coordinate, corrupting mouse position.
+\t\t\t// Push a synthetic motion event with correct coords instead.
 \t\t\tSDL_Event syntheticMotion;
 \t\t\tmemset(&syntheticMotion, 0, sizeof(syntheticMotion));
 \t\t\tsyntheticMotion.type = SDL_MOUSEMOTION;
