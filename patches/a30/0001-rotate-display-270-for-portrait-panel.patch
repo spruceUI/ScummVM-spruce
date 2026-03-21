@@ -1,0 +1,11 @@
+--- a/backends/graphics/windowed.h
++++ b/backends/graphics/windowed.h
+@@ -1,7 +1,7 @@
+ 	WindowedGraphicsManager() :
+ 		_windowWidth(0),
+ 		_windowHeight(0),
+ 		_screenAlign(SCREEN_ALIGN_CENTER | SCREEN_ALIGN_MIDDLE),
+-		_rotationMode(Common::kRotationNormal),
++		_rotationMode(Common::kRotation270),
+ 		_ignoreGameSafeArea(false),
+ 		_overlayVisible(false),
