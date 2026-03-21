@@ -24,104 +24,69 @@ for dir in /patches/common /patches/a30; do
     fi
 done
 
-# Fix SDL_WarpMouseInWindow on fbdev: it generates motion events with
-# a stale Y coordinate. Return false so setSystemMousePosition falls
-# through to fakeWarpMouse, which updates position internally.
+# Handle display rotation at the rendering level instead of using ScummVM's
+# rotation_mode (which breaks mouse input). Check DISPLAY_ROTATION env var.
+# Approach: swap reported window dimensions so ScummVM works in landscape,
+# then rotate the final SDL_RenderCopy output to fit the portrait panel.
+# This matches the RetroArch approach (RA patches the GL viewport similarly).
+
+# Patch 1: Swap window dimensions so ScummVM sees 640x480 (landscape)
 python3 << 'PYEOF'
-with open('backends/platform/sdl/sdl-window.cpp', 'r') as f:
+with open('backends/graphics/surfacesdl/surfacesdl-graphics.cpp', 'r') as f:
     code = f.read()
 
-old = '''\t\t\tSDL_WarpMouseInWindow(_window, x, y);
-\t\t\treturn true;'''
+# After getWindowSizeFromSdl, swap dimensions if DISPLAY_ROTATION is set
+old = '''\tgetWindowSizeFromSdl(&_windowWidth, &_windowHeight);
+\thandleResize(_windowWidth, _windowHeight);'''
 
-new = '''\t\t\t// On fbdev, SDL_WarpMouseInWindow generates motion events
-\t\t\t// with stale Y. Return false to use fakeWarpMouse instead.
-\t\t\treturn false;'''
+new = '''\tgetWindowSizeFromSdl(&_windowWidth, &_windowHeight);
+\t// Swap dimensions for rotated portrait panels (e.g. A30 480x640 used as landscape)
+\tif (getenv("DISPLAY_ROTATION") && (atoi(getenv("DISPLAY_ROTATION")) % 180 != 0)) {
+\t\tint tmp = _windowWidth; _windowWidth = _windowHeight; _windowHeight = tmp;
+\t}
+\thandleResize(_windowWidth, _windowHeight);'''
 
-assert old in code, 'Could not find SDL_WarpMouseInWindow call to patch'
+assert old in code, 'Could not find getWindowSizeFromSdl/handleResize block'
 code = code.replace(old, new)
 
-with open('backends/platform/sdl/sdl-window.cpp', 'w') as f:
-    f.write(code)
-PYEOF
-echo "Patched warpMouseInWindow to use fakeWarpMouse fallback"
+# Also swap in notifyResize for runtime resize events
+old = '''void SurfaceSdlGraphicsManager::notifyResize(const int width, const int height) {
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+\thandleResize(width, height);'''
 
-# Fix warpMouse() comparison: the cursor transform stores pre-rotation coords
-# in _cursorX/_cursorY, but warpMouse reads them as window coords through
-# convertWindowToVirtual, producing wrong results and skipping warps.
-# Remove the comparison so warps always execute.
-python3 << 'PYEOF'
-with open('backends/graphics/windowed.h', 'r') as f:
-    code = f.read()
+new = '''void SurfaceSdlGraphicsManager::notifyResize(const int width, const int height) {
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+\tif (getenv("DISPLAY_ROTATION") && (atoi(getenv("DISPLAY_ROTATION")) % 180 != 0))
+\t\thandleResize(height, width);
+\telse
+\t\thandleResize(width, height);'''
 
-old = '''\t\tconst Common::Point virtualCursor = convertWindowToVirtual(_cursorX, _cursorY);
-\t\tif (virtualCursor.x != x || virtualCursor.y != y) {
-\t\t\t// Warping the mouse in SDL generates a mouse movement event, so
-\t\t\t// `setMousePosition` would be called eventually through the
-\t\t\t// `notifyMousePosition` callback if we *only* set the system mouse
-\t\t\t// position here. However, this can cause problems with some games.
-\t\t\t// For example, the cannon script in CoMI calls to warp the mouse
-\t\t\t// twice each time the cannon is reloaded, and unless we update the
-\t\t\t// mouse position immediately, the second call is ignored, which
-\t\t\t// causes the cannon to change its aim.
-\t\t\tconst Common::Point windowCursor = convertVirtualToWindow(x, y);
-\t\t\tsetMousePosition(windowCursor.x, windowCursor.y);
-\t\t\tsetSystemMousePosition(windowCursor.x, windowCursor.y);
-\t\t}'''
-
-new = '''\t\tconst Common::Point windowCursor = convertVirtualToWindow(x, y);
-\t\t// Cursor is drawn in pre-rotation space, transform for rendering
-\t\tif (_rotationMode == Common::kRotation270) {
-\t\t\tsetMousePosition(windowCursor.y, (_windowWidth - 1) - windowCursor.x);
-\t\t} else if (_rotationMode == Common::kRotation90) {
-\t\t\tsetMousePosition((_windowHeight - 1) - windowCursor.y, windowCursor.x);
-\t\t} else {
-\t\t\tsetMousePosition(windowCursor.x, windowCursor.y);
-\t\t}
-\t\tsetSystemMousePosition(windowCursor.x, windowCursor.y);'''
-
-assert old in code, 'Could not find warpMouse comparison to patch'
+assert old in code, 'Could not find notifyResize'
 code = code.replace(old, new)
 
-with open('backends/graphics/windowed.h', 'w') as f:
-    f.write(code)
-PYEOF
-echo "Patched warpMouse to skip position comparison"
+# Force viewport swap AND rotation in SDL_UpdateRects
+old = '''\t/* Destination rectangle represents the texture before rotation */
+\tif (_rotationMode == Common::kRotation90 || _rotationMode == Common::kRotation270) {'''
 
-# Fix cursor rendering for rotated displays on fbdev.
-# The cursor is drawn in the pre-rotation framebuffer, so setMousePosition
-# needs pre-rotation coordinates. convertWindowToVirtual already handles
-# rotation for game events, so it must keep the original window coords.
-python3 << 'PYEOF'
-with open('backends/graphics/sdl/sdl-graphics.cpp', 'r') as f:
-    code = f.read()
+new = '''\t/* Destination rectangle represents the texture before rotation */
+\tint _effectiveRotation = (int)_rotationMode;
+\tif (_effectiveRotation == 0 && getenv("DISPLAY_ROTATION"))
+\t\t_effectiveRotation = atoi(getenv("DISPLAY_ROTATION"));
+\tif (_effectiveRotation == 90 || _effectiveRotation == 270) {'''
 
-old = '''\tif (valid) {
-\t\tsetMousePosition(mouse.x, mouse.y);
-\t\tmouse = convertWindowToVirtual(mouse.x, mouse.y);
-\t}'''
-
-new = '''\tif (valid) {
-\t\t// Cursor is drawn in pre-rotation space, so transform window
-\t\t// coords to pre-rotation coords for setMousePosition.
-\t\t// convertWindowToVirtual handles rotation internally.
-\t\tif (_rotationMode == Common::kRotation270) {
-\t\t\tsetMousePosition(mouse.y, (_windowWidth - 1) - mouse.x);
-\t\t} else if (_rotationMode == Common::kRotation90) {
-\t\t\tsetMousePosition((_windowHeight - 1) - mouse.y, mouse.x);
-\t\t} else {
-\t\t\tsetMousePosition(mouse.x, mouse.y);
-\t\t}
-\t\tmouse = convertWindowToVirtual(mouse.x, mouse.y);
-\t}'''
-
-assert old in code, 'Could not find setMousePosition/convertWindowToVirtual block to patch'
+assert old in code, 'Could not find viewport rotation check'
 code = code.replace(old, new)
 
-with open('backends/graphics/sdl/sdl-graphics.cpp', 'w') as f:
+# Use _effectiveRotation for the angle too
+old2 = '''\tint rotangle = (int)_rotationMode;'''
+new2 = '''\tint rotangle = _effectiveRotation;'''
+assert old2 in code, 'Could not find rotangle assignment'
+code = code.replace(old2, new2)
+
+with open('backends/graphics/surfacesdl/surfacesdl-graphics.cpp', 'w') as f:
     f.write(code)
 PYEOF
-echo "Patched cursor position for rotated display"
+echo "Patched surfacesdl for display rotation without rotation_mode"
 
 # A30 buildroot toolchain
 TOOLCHAIN=/opt/a30
