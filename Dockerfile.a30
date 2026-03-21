@@ -45,6 +45,24 @@ RUN SYSROOT=/opt/a30/arm-a30-linux-gnueabihf/sysroot && \
     ln -sf libresolv-2.23.so libresolv.so.2 && \
     ln -sf libnsl-2.23.so libnsl.so.1
 
+# Cross-compile libtheora (not in toolchain sysroot, not on device)
+RUN SYSROOT=/opt/a30/arm-a30-linux-gnueabihf/sysroot && \
+    export PATH="/opt/a30/bin:$PATH" && \
+    export CC="arm-a30-linux-gnueabihf-gcc" && \
+    export CFLAGS="--sysroot=$SYSROOT -march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard" && \
+    export LDFLAGS="--sysroot=$SYSROOT" && \
+    export PKG_CONFIG_LIBDIR="$SYSROOT/usr/lib/pkgconfig" && \
+    export PKG_CONFIG_SYSROOT_DIR="$SYSROOT" && \
+    cd /tmp && \
+    wget -q https://downloads.xiph.org/releases/theora/libtheora-1.1.1.tar.bz2 && \
+    tar xjf libtheora-1.1.1.tar.bz2 && \
+    cd libtheora-1.1.1 && \
+    ./configure --host=arm-a30-linux-gnueabihf --prefix=$SYSROOT/usr \
+        --disable-static --enable-shared \
+        --disable-examples --disable-spec --disable-encode && \
+    make -j$(nproc) && make install && \
+    rm -rf /tmp/libtheora-1.1.1*
+
 # Create library symlinks that ScummVM's configure expects
 RUN SYSROOT=/opt/a30/arm-a30-linux-gnueabihf/sysroot && \
     cd "$SYSROOT/usr/lib" && \

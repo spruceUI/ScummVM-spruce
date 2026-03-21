@@ -64,4 +64,7 @@ mkdir -p "$OUTPUT_DIR"
 cp scummvm "$OUTPUT_DIR/"
 ${CROSS}-strip "$OUTPUT_DIR/scummvm"
 
+# Bundle libtheora (not on device)
+cp "$SYSROOT/usr/lib/libtheoradec.so.1"* "$OUTPUT_DIR/"
+
 echo "=== Build complete: ${OUTPUT_DIR}/scummvm ==="
