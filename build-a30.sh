@@ -24,6 +24,10 @@ for dir in /patches/common /patches/a30; do
     fi
 done
 
+# Rotate display 270 degrees (90 CCW) for A30's portrait panel
+sed -i 's/_rotationMode(Common::kRotationNormal)/_rotationMode(Common::kRotation270)/' \
+    backends/graphics/windowed.h
+
 # A30 buildroot toolchain
 TOOLCHAIN=/opt/a30
 SYSROOT=$TOOLCHAIN/arm-a30-linux-gnueabihf/sysroot
