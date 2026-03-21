@@ -72,7 +72,15 @@ new = '''\t/* Destination rectangle represents the texture before rotation */
 \tint _effectiveRotation = (int)_rotationMode;
 \tif (_effectiveRotation == 0 && SDL_getenv("DISPLAY_ROTATION"))
 \t\t_effectiveRotation = SDL_atoi(SDL_getenv("DISPLAY_ROTATION"));
-\tif (_effectiveRotation == 90 || _effectiveRotation == 270) {'''
+\tif (_effectiveRotation != (int)_rotationMode
+\t\t&& (_effectiveRotation == 90 || _effectiveRotation == 270)) {
+\t\t// DISPLAY_ROTATION without rotation_mode: drawRect is in logical
+\t\t// (swapped) space. Center content on physical surface.
+\t\tviewport.w = drawRect.width();
+\t\tviewport.h = drawRect.height();
+\t\tviewport.x = (_windowHeight - viewport.w) / 2;
+\t\tviewport.y = (_windowWidth - viewport.h) / 2;
+\t} else if (_rotationMode == Common::kRotation90 || _rotationMode == Common::kRotation270) {'''
 
 assert old in code, 'Could not find viewport rotation check'
 code = code.replace(old, new)
