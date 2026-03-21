@@ -41,7 +41,7 @@ old = '''\tgetWindowSizeFromSdl(&_windowWidth, &_windowHeight);
 
 new = '''\tgetWindowSizeFromSdl(&_windowWidth, &_windowHeight);
 \t// Swap dimensions for rotated portrait panels (e.g. A30 480x640 used as landscape)
-\tif (getenv("DISPLAY_ROTATION") && (atoi(getenv("DISPLAY_ROTATION")) % 180 != 0)) {
+\tif (SDL_getenv("DISPLAY_ROTATION") && (SDL_atoi(SDL_getenv("DISPLAY_ROTATION")) % 180 != 0)) {
 \t\tint tmp = _windowWidth; _windowWidth = _windowHeight; _windowHeight = tmp;
 \t}
 \thandleResize(_windowWidth, _windowHeight);'''
@@ -56,7 +56,7 @@ old = '''void SurfaceSdlGraphicsManager::notifyResize(const int width, const int
 
 new = '''void SurfaceSdlGraphicsManager::notifyResize(const int width, const int height) {
 #if SDL_VERSION_ATLEAST(2, 0, 0)
-\tif (getenv("DISPLAY_ROTATION") && (atoi(getenv("DISPLAY_ROTATION")) % 180 != 0))
+\tif (SDL_getenv("DISPLAY_ROTATION") && (SDL_atoi(SDL_getenv("DISPLAY_ROTATION")) % 180 != 0))
 \t\thandleResize(height, width);
 \telse
 \t\thandleResize(width, height);'''
@@ -70,8 +70,8 @@ old = '''\t/* Destination rectangle represents the texture before rotation */
 
 new = '''\t/* Destination rectangle represents the texture before rotation */
 \tint _effectiveRotation = (int)_rotationMode;
-\tif (_effectiveRotation == 0 && getenv("DISPLAY_ROTATION"))
-\t\t_effectiveRotation = atoi(getenv("DISPLAY_ROTATION"));
+\tif (_effectiveRotation == 0 && SDL_getenv("DISPLAY_ROTATION"))
+\t\t_effectiveRotation = SDL_atoi(SDL_getenv("DISPLAY_ROTATION"));
 \tif (_effectiveRotation == 90 || _effectiveRotation == 270) {'''
 
 assert old in code, 'Could not find viewport rotation check'
