@@ -53,6 +53,7 @@ rm -f "$SYSROOT/usr/lib/libfontconfig"* "$SYSROOT/usr/lib/pkgconfig/fontconfig.p
     --enable-release \
     --disable-debug \
     --disable-eventrecorder \
+    --disable-sdlnet \
     --with-sdl-prefix="$SYSROOT/usr"
 
 # Build
