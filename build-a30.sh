@@ -53,6 +53,33 @@ with open('backends/platform/sdl/sdl-window.cpp', 'w') as f:
 PYEOF
 echo "Patched SDL_WarpMouseInWindow for fbdev"
 
+# Fix warpMouse() comparison: the cursor transform stores pre-rotation coords
+# in _cursorX/_cursorY, but warpMouse reads them as window coords through
+# convertWindowToVirtual, producing wrong results and skipping warps.
+# Remove the comparison so warps always execute.
+python3 << 'PYEOF'
+with open('backends/graphics/windowed.h', 'r') as f:
+    code = f.read()
+
+old = '''\t\tconst Common::Point virtualCursor = convertWindowToVirtual(_cursorX, _cursorY);
+\t\tif (virtualCursor.x != x || virtualCursor.y != y) {
+\t\t\tconst Common::Point windowCursor = convertVirtualToWindow(x, y);
+\t\t\tsetMousePosition(windowCursor.x, windowCursor.y);
+\t\t\tsetSystemMousePosition(windowCursor.x, windowCursor.y);
+\t\t}'''
+
+new = '''\t\tconst Common::Point windowCursor = convertVirtualToWindow(x, y);
+\t\tsetMousePosition(windowCursor.x, windowCursor.y);
+\t\tsetSystemMousePosition(windowCursor.x, windowCursor.y);'''
+
+assert old in code, 'Could not find warpMouse comparison to patch'
+code = code.replace(old, new)
+
+with open('backends/graphics/windowed.h', 'w') as f:
+    f.write(code)
+PYEOF
+echo "Patched warpMouse to skip position comparison"
+
 # Fix cursor rendering for rotated displays on fbdev.
 # The cursor is drawn in the pre-rotation framebuffer, so setMousePosition
 # needs pre-rotation coordinates. convertWindowToVirtual already handles
@@ -71,9 +98,9 @@ new = '''\tif (valid) {
 \t\t// coords to pre-rotation coords for setMousePosition.
 \t\t// convertWindowToVirtual handles rotation internally.
 \t\tif (_rotationMode == Common::kRotation270) {
-\t\t\tsetMousePosition(mouse.y, (_windowWidth - 1) - mouse.x);
-\t\t} else if (_rotationMode == Common::kRotation90) {
 \t\t\tsetMousePosition((_windowHeight - 1) - mouse.y, mouse.x);
+\t\t} else if (_rotationMode == Common::kRotation90) {
+\t\t\tsetMousePosition(mouse.y, (_windowWidth - 1) - mouse.x);
 \t\t} else {
 \t\t\tsetMousePosition(mouse.x, mouse.y);
 \t\t}
