@@ -167,4 +167,44 @@ ${CROSS}-strip "$OUTPUT_DIR/scummvm"
 cp "$SYSROOT/usr/lib/libtheoradec.so.1"* "$OUTPUT_DIR/"
 cp "$SYSROOT/usr/lib/libSDL2_net-2.0.so.0"* "$OUTPUT_DIR/"
 
+# Build fixjoy helper: reads and fixes evdev axis calibration
+cat > /tmp/fixjoy.c << 'FIXJOY'
+#include <stdio.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <linux/input.h>
+#include <sys/ioctl.h>
+#include <string.h>
+#include <stdlib.h>
+
+int main(int argc, char **argv) {
+    const char *dev = argc > 1 ? argv[1] : "/dev/input/event4";
+    int range = argc > 2 ? atoi(argv[2]) : 128;
+    int fd = open(dev, O_RDWR);
+    if (fd < 0) { perror("open"); return 1; }
+
+    int i;
+    for (i = 0; i < 6; i++) {
+        struct input_absinfo info;
+        if (ioctl(fd, EVIOCGABS(i), &info) == 0) {
+            printf("axis %d: val=%d min=%d max=%d fuzz=%d flat=%d\n",
+                   i, info.value, info.minimum, info.maximum, info.fuzz, info.flat);
+            if (info.minimum < -range || info.maximum > range) {
+                printf("  -> fixing range to [%d, %d]\n", -range, range);
+                info.minimum = -range;
+                info.maximum = range;
+                info.fuzz = 0;
+                info.flat = 0;
+                ioctl(fd, EVIOCSABS(i), &info);
+            }
+        }
+    }
+    close(fd);
+    return 0;
+}
+FIXJOY
+${CROSS}-gcc -static -o "$OUTPUT_DIR/fixjoy" /tmp/fixjoy.c
+${CROSS}-strip "$OUTPUT_DIR/fixjoy"
+echo "Built fixjoy helper"
+
 echo "=== Build complete: ${OUTPUT_DIR}/scummvm ==="
