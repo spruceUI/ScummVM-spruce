@@ -63,6 +63,14 @@ with open('backends/graphics/windowed.h', 'r') as f:
 
 old = '''\t\tconst Common::Point virtualCursor = convertWindowToVirtual(_cursorX, _cursorY);
 \t\tif (virtualCursor.x != x || virtualCursor.y != y) {
+\t\t\t// Warping the mouse in SDL generates a mouse movement event, so
+\t\t\t// `setMousePosition` would be called eventually through the
+\t\t\t// `notifyMousePosition` callback if we *only* set the system mouse
+\t\t\t// position here. However, this can cause problems with some games.
+\t\t\t// For example, the cannon script in CoMI calls to warp the mouse
+\t\t\t// twice each time the cannon is reloaded, and unless we update the
+\t\t\t// mouse position immediately, the second call is ignored, which
+\t\t\t// causes the cannon to change its aim.
 \t\t\tconst Common::Point windowCursor = convertVirtualToWindow(x, y);
 \t\t\tsetMousePosition(windowCursor.x, windowCursor.y);
 \t\t\tsetSystemMousePosition(windowCursor.x, windowCursor.y);
