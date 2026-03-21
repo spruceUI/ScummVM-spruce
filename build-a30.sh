@@ -30,8 +30,9 @@ SYSROOT=$TOOLCHAIN/arm-a30-linux-gnueabihf/sysroot
 CROSS=arm-a30-linux-gnueabihf
 
 export PATH="$TOOLCHAIN/bin:$PATH"
-export CC="${CROSS}-gcc"
-export CXX="${CROSS}-g++"
+export CCACHE_DIR="${CCACHE_DIR:-/ccache}"
+export CC="ccache ${CROSS}-gcc"
+export CXX="ccache ${CROSS}-g++"
 export AR="${CROSS}-ar"
 export STRIP="${CROSS}-strip"
 export PKG_CONFIG_PATH="$SYSROOT/usr/lib/pkgconfig"
