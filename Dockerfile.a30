@@ -63,6 +63,24 @@ RUN SYSROOT=/opt/a30/arm-a30-linux-gnueabihf/sysroot && \
     make -j$(nproc) && make install && \
     rm -rf /tmp/libtheora-1.1.1*
 
+# Cross-compile SDL2_net (not on device)
+RUN SYSROOT=/opt/a30/arm-a30-linux-gnueabihf/sysroot && \
+    export PATH="/opt/a30/bin:$PATH" && \
+    export CC="arm-a30-linux-gnueabihf-gcc" && \
+    export CFLAGS="--sysroot=$SYSROOT -march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard" && \
+    export LDFLAGS="--sysroot=$SYSROOT" && \
+    export PKG_CONFIG_LIBDIR="$SYSROOT/usr/lib/pkgconfig" && \
+    export PKG_CONFIG_SYSROOT_DIR="$SYSROOT" && \
+    cd /tmp && \
+    wget -q https://www.libsdl.org/projects/SDL_net/release/SDL2_net-2.2.0.tar.gz && \
+    tar xzf SDL2_net-2.2.0.tar.gz && \
+    cd SDL2_net-2.2.0 && \
+    ./configure --host=arm-a30-linux-gnueabihf --prefix=$SYSROOT/usr \
+        --disable-static --enable-shared \
+        --with-sdl-prefix=$SYSROOT/usr && \
+    make -j$(nproc) && make install && \
+    rm -rf /tmp/SDL2_net-2.2.0*
+
 # Create library symlinks that ScummVM's configure expects
 RUN SYSROOT=/opt/a30/arm-a30-linux-gnueabihf/sysroot && \
     cd "$SYSROOT/usr/lib" && \

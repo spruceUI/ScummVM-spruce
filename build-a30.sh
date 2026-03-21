@@ -57,7 +57,6 @@ rm -f "$SYSROOT/usr/lib/libfontconfig"* "$SYSROOT/usr/lib/pkgconfig/fontconfig.p
     --enable-release \
     --disable-debug \
     --disable-eventrecorder \
-    --disable-sdlnet \
     --with-sdl-prefix="$SYSROOT/usr"
 
 # Build
@@ -68,7 +67,8 @@ mkdir -p "$OUTPUT_DIR"
 cp scummvm "$OUTPUT_DIR/"
 ${CROSS}-strip "$OUTPUT_DIR/scummvm"
 
-# Bundle libtheora (not on device)
+# Bundle libs not on device
 cp "$SYSROOT/usr/lib/libtheoradec.so.1"* "$OUTPUT_DIR/"
+cp "$SYSROOT/usr/lib/libSDL2_net-2.0.so.0"* "$OUTPUT_DIR/"
 
 echo "=== Build complete: ${OUTPUT_DIR}/scummvm ==="
