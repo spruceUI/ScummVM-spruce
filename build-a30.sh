@@ -24,9 +24,9 @@ for dir in /patches/common /patches/a30; do
     fi
 done
 
-# Fix SDL_WarpMouseInWindow on fbdev: the warp does not reliably generate
-# a motion event with correct coordinates (Y stays stale). Push a synthetic
-# SDL_MOUSEMOTION after every warp so the position is always up to date.
+# Fix SDL_WarpMouseInWindow on fbdev: it generates motion events with
+# a stale Y coordinate. Return false so setSystemMousePosition falls
+# through to fakeWarpMouse, which updates position internally.
 python3 << 'PYEOF'
 with open('backends/platform/sdl/sdl-window.cpp', 'r') as f:
     code = f.read()
@@ -34,16 +34,9 @@ with open('backends/platform/sdl/sdl-window.cpp', 'r') as f:
 old = '''\t\t\tSDL_WarpMouseInWindow(_window, x, y);
 \t\t\treturn true;'''
 
-new = '''\t\t\t// Skip SDL_WarpMouseInWindow on fbdev — it generates motion
-\t\t\t// events with a stale Y coordinate, corrupting mouse position.
-\t\t\t// Push a synthetic motion event with correct coords instead.
-\t\t\tSDL_Event syntheticMotion;
-\t\t\tmemset(&syntheticMotion, 0, sizeof(syntheticMotion));
-\t\t\tsyntheticMotion.type = SDL_MOUSEMOTION;
-\t\t\tsyntheticMotion.motion.x = x;
-\t\t\tsyntheticMotion.motion.y = y;
-\t\t\tSDL_PushEvent(&syntheticMotion);
-\t\t\treturn true;'''
+new = '''\t\t\t// On fbdev, SDL_WarpMouseInWindow generates motion events
+\t\t\t// with stale Y. Return false to use fakeWarpMouse instead.
+\t\t\treturn false;'''
 
 assert old in code, 'Could not find SDL_WarpMouseInWindow call to patch'
 code = code.replace(old, new)
@@ -51,7 +44,7 @@ code = code.replace(old, new)
 with open('backends/platform/sdl/sdl-window.cpp', 'w') as f:
     f.write(code)
 PYEOF
-echo "Patched SDL_WarpMouseInWindow for fbdev"
+echo "Patched warpMouseInWindow to use fakeWarpMouse fallback"
 
 # Fix warpMouse() comparison: the cursor transform stores pre-rotation coords
 # in _cursorX/_cursorY, but warpMouse reads them as window coords through
@@ -77,7 +70,14 @@ old = '''\t\tconst Common::Point virtualCursor = convertWindowToVirtual(_cursorX
 \t\t}'''
 
 new = '''\t\tconst Common::Point windowCursor = convertVirtualToWindow(x, y);
-\t\tsetMousePosition(windowCursor.x, windowCursor.y);
+\t\t// Cursor is drawn in pre-rotation space, transform for rendering
+\t\tif (_rotationMode == Common::kRotation270) {
+\t\t\tsetMousePosition(windowCursor.y, (_windowWidth - 1) - windowCursor.x);
+\t\t} else if (_rotationMode == Common::kRotation90) {
+\t\t\tsetMousePosition((_windowHeight - 1) - windowCursor.y, windowCursor.x);
+\t\t} else {
+\t\t\tsetMousePosition(windowCursor.x, windowCursor.y);
+\t\t}
 \t\tsetSystemMousePosition(windowCursor.x, windowCursor.y);'''
 
 assert old in code, 'Could not find warpMouse comparison to patch'
