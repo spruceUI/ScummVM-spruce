@@ -28,7 +28,7 @@ done
 # The cursor is rendered in pre-rotation (logical) space, so setMousePosition
 # needs transformed coords. But convertWindowToVirtual already handles rotation
 # internally, so it must receive the original physical window coords.
-python3 -c "
+python3 << 'PYEOF'
 with open('backends/graphics/sdl/sdl-graphics.cpp', 'r') as f:
     code = f.read()
 
@@ -42,7 +42,7 @@ new = '''\tif (valid) {
 \t\t{
 \t\t\tstatic int logCount = 0;
 \t\t\tif (logCount < 200 && logCount % 10 == 0) {
-\t\t\t\tdebug("MOUSE wW=%d wH=%d mx=%d my=%d drL=%d drT=%d drR=%d drB=%d rot=%d",
+\t\t\t\twarning("MOUSE wW=%d wH=%d mx=%d my=%d drL=%d drT=%d drR=%d drB=%d rot=%d",
 \t\t\t\t\t_windowWidth, _windowHeight, mouse.x, mouse.y,
 \t\t\t\t\t_activeArea.drawRect.left, _activeArea.drawRect.top,
 \t\t\t\t\t_activeArea.drawRect.right, _activeArea.drawRect.bottom,
@@ -59,7 +59,7 @@ code = code.replace(old, new)
 
 with open('backends/graphics/sdl/sdl-graphics.cpp', 'w') as f:
     f.write(code)
-"
+PYEOF
 echo "Patched mouse coordinates for rotated display"
 
 # A30 buildroot toolchain
