@@ -24,43 +24,35 @@ for dir in /patches/common /patches/a30; do
     fi
 done
 
-# Fix mouse cursor position for rotated displays on fbdev.
-# The cursor is rendered in pre-rotation (logical) space, so setMousePosition
-# needs transformed coords. But convertWindowToVirtual already handles rotation
-# internally, so it must receive the original physical window coords.
+# Fix SDL_WarpMouseInWindow on fbdev: the warp does not reliably generate
+# a motion event with correct coordinates (Y stays stale). Push a synthetic
+# SDL_MOUSEMOTION after every warp so the position is always up to date.
 python3 << 'PYEOF'
-with open('backends/graphics/sdl/sdl-graphics.cpp', 'r') as f:
+with open('backends/platform/sdl/sdl-window.cpp', 'r') as f:
     code = f.read()
 
-old = '''\tif (valid) {
-\t\tsetMousePosition(mouse.x, mouse.y);
-\t\tmouse = convertWindowToVirtual(mouse.x, mouse.y);
-\t}'''
+old = '''\t\t\tSDL_WarpMouseInWindow(_window, x, y);
+\t\t\treturn true;'''
 
-new = '''\tif (valid) {
-\t\t// Debug: log window dims and mouse coords (temporary)
-\t\t{
-\t\t\tstatic int logCount = 0;
-\t\t\tif (logCount < 200 && logCount % 10 == 0) {
-\t\t\t\twarning("MOUSE wW=%d wH=%d mx=%d my=%d drL=%d drT=%d drR=%d drB=%d rot=%d",
-\t\t\t\t\t_windowWidth, _windowHeight, mouse.x, mouse.y,
-\t\t\t\t\t_activeArea.drawRect.left, _activeArea.drawRect.top,
-\t\t\t\t\t_activeArea.drawRect.right, _activeArea.drawRect.bottom,
-\t\t\t\t\t(int)_rotationMode);
-\t\t\t}
-\t\t\tlogCount++;
-\t\t}
-\t\tsetMousePosition(mouse.x, mouse.y);
-\t\tmouse = convertWindowToVirtual(mouse.x, mouse.y);
-\t}'''
+new = '''\t\t\tSDL_WarpMouseInWindow(_window, x, y);
+\t\t\t// On fbdev, SDL_WarpMouseInWindow may not generate a correct
+\t\t\t// motion event (Y coordinate stays stale). Push a synthetic
+\t\t\t// one to ensure the position is always updated.
+\t\t\tSDL_Event syntheticMotion;
+\t\t\tmemset(&syntheticMotion, 0, sizeof(syntheticMotion));
+\t\t\tsyntheticMotion.type = SDL_MOUSEMOTION;
+\t\t\tsyntheticMotion.motion.x = x;
+\t\t\tsyntheticMotion.motion.y = y;
+\t\t\tSDL_PushEvent(&syntheticMotion);
+\t\t\treturn true;'''
 
-assert old in code, 'Could not find setMousePosition/convertWindowToVirtual block to patch'
+assert old in code, 'Could not find SDL_WarpMouseInWindow call to patch'
 code = code.replace(old, new)
 
-with open('backends/graphics/sdl/sdl-graphics.cpp', 'w') as f:
+with open('backends/platform/sdl/sdl-window.cpp', 'w') as f:
     f.write(code)
 PYEOF
-echo "Patched mouse coordinates for rotated display"
+echo "Patched SDL_WarpMouseInWindow for fbdev"
 
 # A30 buildroot toolchain
 TOOLCHAIN=/opt/a30
