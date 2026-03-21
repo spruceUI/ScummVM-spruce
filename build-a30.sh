@@ -54,6 +54,41 @@ with open('backends/platform/sdl/sdl-window.cpp', 'w') as f:
 PYEOF
 echo "Patched SDL_WarpMouseInWindow for fbdev"
 
+# Fix cursor rendering for rotated displays on fbdev.
+# The cursor is drawn in the pre-rotation framebuffer, so setMousePosition
+# needs pre-rotation coordinates. convertWindowToVirtual already handles
+# rotation for game events, so it must keep the original window coords.
+python3 << 'PYEOF'
+with open('backends/graphics/sdl/sdl-graphics.cpp', 'r') as f:
+    code = f.read()
+
+old = '''\tif (valid) {
+\t\tsetMousePosition(mouse.x, mouse.y);
+\t\tmouse = convertWindowToVirtual(mouse.x, mouse.y);
+\t}'''
+
+new = '''\tif (valid) {
+\t\t// Cursor is drawn in pre-rotation space, so transform window
+\t\t// coords to pre-rotation coords for setMousePosition.
+\t\t// convertWindowToVirtual handles rotation internally.
+\t\tif (_rotationMode == Common::kRotation270) {
+\t\t\tsetMousePosition(mouse.y, (_windowWidth - 1) - mouse.x);
+\t\t} else if (_rotationMode == Common::kRotation90) {
+\t\t\tsetMousePosition((_windowHeight - 1) - mouse.y, mouse.x);
+\t\t} else {
+\t\t\tsetMousePosition(mouse.x, mouse.y);
+\t\t}
+\t\tmouse = convertWindowToVirtual(mouse.x, mouse.y);
+\t}'''
+
+assert old in code, 'Could not find setMousePosition/convertWindowToVirtual block to patch'
+code = code.replace(old, new)
+
+with open('backends/graphics/sdl/sdl-graphics.cpp', 'w') as f:
+    f.write(code)
+PYEOF
+echo "Patched cursor position for rotated display"
+
 # A30 buildroot toolchain
 TOOLCHAIN=/opt/a30
 SYSROOT=$TOOLCHAIN/arm-a30-linux-gnueabihf/sysroot
