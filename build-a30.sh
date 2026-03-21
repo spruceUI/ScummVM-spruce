@@ -38,19 +38,15 @@ old = '''\tif (valid) {
 \t}'''
 
 new = '''\tif (valid) {
-\t\t// Debug: log window dims and mouse coords to file (temporary)
+\t\t// Debug: log window dims and mouse coords (temporary)
 \t\t{
 \t\t\tstatic int logCount = 0;
 \t\t\tif (logCount < 200 && logCount % 10 == 0) {
-\t\t\t\tFILE *f = fopen("/mnt/SDCARD/scummvm_mouse_debug.log", "a");
-\t\t\t\tif (f) {
-\t\t\t\t\tfprintf(f, "wW=%d wH=%d mx=%d my=%d drL=%d drT=%d drR=%d drB=%d rot=%d\\n",
-\t\t\t\t\t\t_windowWidth, _windowHeight, mouse.x, mouse.y,
-\t\t\t\t\t\t_activeArea.drawRect.left, _activeArea.drawRect.top,
-\t\t\t\t\t\t_activeArea.drawRect.right, _activeArea.drawRect.bottom,
-\t\t\t\t\t\t(int)_rotationMode);
-\t\t\t\t\tfclose(f);
-\t\t\t\t}
+\t\t\t\tdebug("MOUSE wW=%d wH=%d mx=%d my=%d drL=%d drT=%d drR=%d drB=%d rot=%d",
+\t\t\t\t\t_windowWidth, _windowHeight, mouse.x, mouse.y,
+\t\t\t\t\t_activeArea.drawRect.left, _activeArea.drawRect.top,
+\t\t\t\t\t_activeArea.drawRect.right, _activeArea.drawRect.bottom,
+\t\t\t\t\t(int)_rotationMode);
 \t\t\t}
 \t\t\tlogCount++;
 \t\t}
