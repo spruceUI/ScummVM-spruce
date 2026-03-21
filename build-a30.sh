@@ -24,6 +24,34 @@ for dir in /patches/common /patches/a30; do
     fi
 done
 
+# Fix mouse input for rotated displays on fbdev (window doesn't rotate,
+# only the rendered output does, so mouse coords need pre-transforming)
+python3 -c "
+with open('backends/graphics/sdl/sdl-graphics.cpp', 'r') as f:
+    code = f.read()
+
+old = '\tmouse.y = (int)(mouse.y * dpiScale + 0.5f);\n\tbool valid = true;'
+new = '''\tmouse.y = (int)(mouse.y * dpiScale + 0.5f);
+\t// Pre-transform mouse from physical to logical space for rotated panels
+\tif (_rotationMode == Common::kRotation270) {
+\t\tint tmp = mouse.x;
+\t\tmouse.x = mouse.y;
+\t\tmouse.y = (_windowWidth - 1) - tmp;
+\t} else if (_rotationMode == Common::kRotation90) {
+\t\tint tmp = mouse.x;
+\t\tmouse.x = (_windowHeight - 1) - mouse.y;
+\t\tmouse.y = tmp;
+\t}
+\tbool valid = true;'''
+
+assert old in code, 'Could not find mouse DPI scaling code to patch'
+code = code.replace(old, new)
+
+with open('backends/graphics/sdl/sdl-graphics.cpp', 'w') as f:
+    f.write(code)
+"
+echo "Patched mouse coordinates for rotated display"
+
 # A30 buildroot toolchain
 TOOLCHAIN=/opt/a30
 SYSROOT=$TOOLCHAIN/arm-a30-linux-gnueabihf/sysroot
