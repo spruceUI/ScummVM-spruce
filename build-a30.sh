@@ -38,13 +38,17 @@ old = '''\tif (valid) {
 \t}'''
 
 new = '''\tif (valid) {
-\t\t// Cursor rendering uses pre-rotation (logical) coordinates,
-\t\t// but convertWindowToVirtual expects physical window coords
-\t\t// (it handles the rotation transform internally).
+\t\t// On rotated fbdev displays, cursor rendering uses physical window
+\t\t// coords but input axes are swapped. Scale the rotated coords to
+\t\t// fit the physical window dimensions (e.g. 480x640 for 270 rotation).
 \t\tif (_rotationMode == Common::kRotation270) {
-\t\t\tsetMousePosition(mouse.y, (_windowWidth - 1) - mouse.x);
+\t\t\tint cx = mouse.y * _windowWidth / _windowHeight;
+\t\t\tint cy = ((_windowWidth - 1) - mouse.x) * _windowHeight / _windowWidth;
+\t\t\tsetMousePosition(cx, cy);
 \t\t} else if (_rotationMode == Common::kRotation90) {
-\t\t\tsetMousePosition((_windowHeight - 1) - mouse.y, mouse.x);
+\t\t\tint cx = ((_windowHeight - 1) - mouse.y) * _windowWidth / _windowHeight;
+\t\t\tint cy = mouse.x * _windowHeight / _windowWidth;
+\t\t\tsetMousePosition(cx, cy);
 \t\t} else {
 \t\t\tsetMousePosition(mouse.x, mouse.y);
 \t\t}
