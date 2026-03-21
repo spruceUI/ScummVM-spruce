@@ -11,6 +11,9 @@ permissions:
   contents: write
   packages: write
 
+env:
+  IMAGE: ghcr.io/sundownersport/scummvm-builder-a30
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -50,9 +53,9 @@ jobs:
           context: .
           file: Dockerfile.a30
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/scummvm-builder-a30:latest
-          cache-from: type=registry,ref=ghcr.io/${{ github.repository_owner }}/scummvm-builder-a30:cache
-          cache-to: type=registry,ref=ghcr.io/${{ github.repository_owner }}/scummvm-builder-a30:cache,mode=max
+          tags: ${{ env.IMAGE }}:latest
+          cache-from: type=registry,ref=${{ env.IMAGE }}:cache
+          cache-to: type=registry,ref=${{ env.IMAGE }}:cache,mode=max
 
       - name: Restore ccache
         uses: actions/cache@v4
@@ -70,7 +73,7 @@ jobs:
             -e SCUMMVM_VERSION=${{ inputs.scummvm_version }} \
             -v ${{ github.workspace }}/output:/output \
             -v ${{ github.workspace }}/ccache:/ccache \
-            ghcr.io/${{ github.repository_owner }}/scummvm-builder-a30:latest
+            ${{ env.IMAGE }}:latest
 
       - name: Upload binary and libs
         env:
