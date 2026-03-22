@@ -51,6 +51,7 @@ export LDFLAGS="-L$SYSROOT/usr/lib -static-libstdc++"
     --enable-release \
     --disable-debug \
     --disable-eventrecorder \
+    --disable-mikmod \
     --with-sdl-prefix="$SYSROOT/usr"
 
 # Build
