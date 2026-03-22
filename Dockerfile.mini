@@ -1,8 +1,8 @@
-FROM debian:buster
+FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Build tools (debian:buster to match the sdl2_miyoo toolchain environment)
+# Build tools
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     build-essential \
@@ -49,7 +49,8 @@ RUN SYSROOT=/opt/mmiyoo/arm-buildroot-linux-gnueabihf/sysroot && \
     wget -q -O sdl2/src/audio/mmiyoo/SDL_audio_mmiyoo.c \
         "https://raw.githubusercontent.com/XK9274/sdl2_miyoo/vanilla/src/audio/mmiyoo/SDL_audio_mmiyoo.c" && \
     cd sdl2 && \
-    MOD=mmiyoo ./configure --host=arm-linux \
+    (MOD=mmiyoo ./configure --host=arm-linux \
+        --build=x86_64-linux-gnu \
         --prefix=$SYSROOT/usr \
         --disable-joystick-virtual --disable-jack --disable-power --disable-sensor \
         --disable-ime --disable-dbus --disable-fcitx --disable-hidapi --disable-libudev \
@@ -57,7 +58,8 @@ RUN SYSROOT=/opt/mmiyoo/arm-buildroot-linux-gnueabihf/sysroot && \
         --disable-video-opengl --disable-video-opengles --disable-video-opengles2 \
         --disable-video-wayland --disable-video-dummy \
         --disable-oss --disable-alsa --disable-sndio --disable-diskaudio \
-        --disable-pulseaudio --disable-dummyaudio && \
+        --disable-pulseaudio --disable-dummyaudio \
+     || (echo "=== config.log ===" && cat config.log && exit 1)) && \
     make -j$(nproc) && \
     make install && \
     rm -rf /tmp/sdl2_miyoo
