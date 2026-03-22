@@ -66,7 +66,7 @@ ${CROSS}-strip "$OUTPUT_DIR/scummvm"
 # Bundle shared libs not available on the Mini device
 LIBS_DIR="$OUTPUT_DIR/libs"
 mkdir -p "$LIBS_DIR"
-for lib in libvorbisfile.so.3 libvorbis.so.0 libogg.so.0 libmad.so.0 \
+for lib in libSDL2-2.0.so.0 libvorbisfile.so.3 libvorbis.so.0 libogg.so.0 libmad.so.0 \
            libasound.so.2 libjpeg.so.9 libgif.so.7 libfreetype.so.6 \
            libfribidi.so.0 libtheoradec.so.1 libSDL2_net-2.0.so.0; do
     found=$(find "$SYSROOT" -name "${lib}*" -type f | head -1)
