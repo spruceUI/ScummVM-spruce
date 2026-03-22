@@ -12,10 +12,10 @@ fb_path = 'sdl2/src/video/mmiyoo/SDL_framebuffer_mmiyoo.c'
 with open(fb_path) as f:
     src = f.read()
 
-# Add required includes
+# Add required includes and extern declarations for globals from SDL_video_mmiyoo.c
 src = src.replace(
     '#include "SDL_framebuffer_mmiyoo.h"',
-    '#include "SDL_framebuffer_mmiyoo.h"\n#include "SDL_video_mmiyoo.h"\n#include <string.h>'
+    '#include "SDL_framebuffer_mmiyoo.h"\n#include "SDL_video_mmiyoo.h"\n#include <string.h>\n\nextern GFX gfx;\nextern int FB_W;\nextern int FB_H;'
 )
 
 # Replace the no-op UpdateWindowFramebuffer with direct framebuffer write
