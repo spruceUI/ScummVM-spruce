@@ -1,10 +1,15 @@
-name: Build ScummVM A30
+name: Build scummvm.a30
 
 on:
   workflow_dispatch:
     inputs:
       scummvm_version:
         description: 'ScummVM version tag'
+        default: 'v2026.1.0'
+  workflow_call:
+    inputs:
+      scummvm_version:
+        type: string
         default: 'v2026.1.0'
 
 permissions:
@@ -29,7 +34,7 @@ jobs:
             gh release create "$TAG" \
               --target "${{ github.ref_name }}" \
               --title "Latest Build" \
-              --notes "ScummVM ${{ inputs.scummvm_version }} binary for Miyoo A30 (spruce)" \
+              --notes "ScummVM ${{ github.event.inputs.scummvm_version || 'v2026.1.0' }} binaries for spruce" \
             || true
 
       - name: Download A30 toolchain
@@ -61,16 +66,16 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ccache
-          key: ccache-a30-${{ inputs.scummvm_version }}-${{ github.sha }}
+          key: ccache-a30-${{ github.event.inputs.scummvm_version || 'v2026.1.0' }}-${{ github.sha }}
           restore-keys: |
-            ccache-a30-${{ inputs.scummvm_version }}-
+            ccache-a30-${{ github.event.inputs.scummvm_version || 'v2026.1.0' }}-
             ccache-a30-
 
       - name: Build ScummVM
         run: |
           mkdir -p output ccache
           docker run --rm \
-            -e SCUMMVM_VERSION=${{ inputs.scummvm_version }} \
+            -e SCUMMVM_VERSION=${{ github.event.inputs.scummvm_version || 'v2026.1.0' }} \
             -v ${{ github.workspace }}/output:/output \
             -v ${{ github.workspace }}/ccache:/ccache \
             ${{ env.IMAGE }}:latest

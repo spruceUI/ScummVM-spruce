@@ -1,0 +1,91 @@
+name: Build scummvm.mini
+
+on:
+  workflow_dispatch:
+    inputs:
+      scummvm_version:
+        description: 'ScummVM version tag'
+        default: 'v2026.1.0'
+  workflow_call:
+    inputs:
+      scummvm_version:
+        type: string
+        default: 'v2026.1.0'
+
+permissions:
+  contents: write
+  packages: write
+
+env:
+  IMAGE: ghcr.io/spruceui/scummvm-builder-mini
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ensure latest release exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="latest"
+          gh release view "$TAG" >/dev/null 2>&1 || \
+            gh release create "$TAG" \
+              --target "${{ github.ref_name }}" \
+              --title "Latest Build" \
+              --notes "ScummVM ${{ github.event.inputs.scummvm_version || 'v2026.1.0' }} binaries for spruce" \
+            || true
+
+      - name: Download Mini toolchain
+        run: |
+          wget -q -O mini_toolchain.tar.gz \
+            "https://github.com/steward-fu/nds_miyoo/releases/download/assets/toolchain.tar.gz"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.mini
+          push: true
+          tags: ${{ env.IMAGE }}:latest
+          cache-from: type=registry,ref=${{ env.IMAGE }}:cache
+          cache-to: type=registry,ref=${{ env.IMAGE }}:cache,mode=max
+
+      - name: Restore ccache
+        uses: actions/cache@v4
+        with:
+          path: ccache
+          key: ccache-mini-${{ github.event.inputs.scummvm_version || 'v2026.1.0' }}-${{ github.sha }}
+          restore-keys: |
+            ccache-mini-${{ github.event.inputs.scummvm_version || 'v2026.1.0' }}-
+            ccache-mini-
+
+      - name: Build ScummVM
+        run: |
+          mkdir -p output ccache
+          docker run --rm \
+            -e SCUMMVM_VERSION=${{ github.event.inputs.scummvm_version || 'v2026.1.0' }} \
+            -v ${{ github.workspace }}/output:/output \
+            -v ${{ github.workspace }}/ccache:/ccache \
+            ${{ env.IMAGE }}:latest
+
+      - name: Upload binary and libs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mv output/scummvm output/scummvm.mini
+          gh release upload "latest" output/scummvm.mini --clobber
+          cd output
+          tar czf scummvm-mini-libs.tar.gz libtheoradec.so.1* libSDL2_net-2.0.so.0*
+          gh release upload "latest" scummvm-mini-libs.tar.gz --clobber

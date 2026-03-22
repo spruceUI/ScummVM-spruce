@@ -1,0 +1,22 @@
+name: Build All
+
+on:
+  workflow_dispatch:
+    inputs:
+      scummvm_version:
+        description: 'ScummVM version tag'
+        default: 'v2026.1.0'
+
+permissions:
+  contents: write
+
+jobs:
+  a30:
+    uses: ./.github/workflows/build-a30.yml
+    with:
+      scummvm_version: ${{ inputs.scummvm_version }}
+
+  mini:
+    uses: ./.github/workflows/build-mini.yml
+    with:
+      scummvm_version: ${{ inputs.scummvm_version }}

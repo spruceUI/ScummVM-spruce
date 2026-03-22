@@ -1,0 +1,103 @@
+FROM ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Build tools — includes autotools for building SDL2 from source
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    build-essential \
+    pkg-config \
+    git \
+    ca-certificates \
+    python3 \
+    wget \
+    ccache \
+    autoconf \
+    automake \
+    libtool \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Miyoo Mini toolchain (steward-fu, same toolchain used by sdl2_miyoo)
+COPY mini_toolchain.tar.gz /tmp/
+RUN cd /tmp && tar xzf mini_toolchain.tar.gz && \
+    mv mmiyoo /opt/mmiyoo && \
+    rm -rf prebuilt mini_toolchain.tar.gz
+
+# Create cross pkg-config wrapper
+RUN SYSROOT=/opt/mmiyoo/arm-buildroot-linux-gnueabihf/sysroot && \
+    printf '#!/bin/sh\nexport PKG_CONFIG_SYSROOT_DIR=%s\nexport PKG_CONFIG_LIBDIR=%s/usr/lib/pkgconfig\nexec pkg-config "$@"\n' \
+    "$SYSROOT" "$SYSROOT" > /opt/mmiyoo/bin/arm-linux-gnueabihf-pkg-config && \
+    chmod +x /opt/mmiyoo/bin/arm-linux-gnueabihf-pkg-config
+
+# Build custom SDL2 with Miyoo Mini video/audio drivers (XK9274/sdl2_miyoo)
+# Main branch for MI vendor headers/libs + SDL2 source; audio fix from vanilla branch
+RUN SYSROOT=/opt/mmiyoo/arm-buildroot-linux-gnueabihf/sysroot && \
+    export PATH="/opt/mmiyoo/bin:$PATH" && \
+    export CC="arm-linux-gnueabihf-gcc" && \
+    export CXX="arm-linux-gnueabihf-g++" && \
+    export CFLAGS="--sysroot=$SYSROOT -marm -mtune=cortex-a7 -march=armv7ve+simd -mfpu=neon-vfpv4 -mfloat-abi=hard" && \
+    export LDFLAGS="--sysroot=$SYSROOT" && \
+    cd /tmp && \
+    git clone --depth 1 https://github.com/XK9274/sdl2_miyoo.git && \
+    cd sdl2_miyoo && \
+    cp mmiyoo/inc/*.h $SYSROOT/usr/include/ && \
+    cp mmiyoo/lib/*.so $SYSROOT/usr/lib/ && \
+    wget -q -O sdl2/src/audio/mmiyoo/SDL_audio_mmiyoo.c \
+        "https://raw.githubusercontent.com/XK9274/sdl2_miyoo/vanilla/src/audio/mmiyoo/SDL_audio_mmiyoo.c" && \
+    cd sdl2 && \
+    ./autogen.sh && \
+    MOD=mmiyoo ./configure --host=arm-linux \
+        --prefix=$SYSROOT/usr \
+        --disable-joystick-virtual --disable-jack --disable-power --disable-sensor \
+        --disable-ime --disable-dbus --disable-fcitx --disable-hidapi --disable-libudev \
+        --disable-video-x11 --disable-video-kmsdrm --disable-video-vulkan \
+        --disable-video-opengl --disable-video-opengles --disable-video-opengles2 \
+        --disable-video-wayland --disable-video-dummy \
+        --disable-oss --disable-alsa --disable-sndio --disable-diskaudio \
+        --disable-pulseaudio --disable-dummyaudio && \
+    make -j$(nproc) && \
+    make install && \
+    rm -rf /tmp/sdl2_miyoo
+
+# Cross-compile libtheora (not on device)
+RUN SYSROOT=/opt/mmiyoo/arm-buildroot-linux-gnueabihf/sysroot && \
+    export PATH="/opt/mmiyoo/bin:$PATH" && \
+    export CC="arm-linux-gnueabihf-gcc" && \
+    export CFLAGS="--sysroot=$SYSROOT -marm -mtune=cortex-a7 -march=armv7ve+simd -mfpu=neon-vfpv4 -mfloat-abi=hard" && \
+    export LDFLAGS="--sysroot=$SYSROOT" && \
+    export PKG_CONFIG_LIBDIR="$SYSROOT/usr/lib/pkgconfig" && \
+    export PKG_CONFIG_SYSROOT_DIR="$SYSROOT" && \
+    cd /tmp && \
+    wget -q https://downloads.xiph.org/releases/theora/libtheora-1.1.1.tar.bz2 && \
+    tar xjf libtheora-1.1.1.tar.bz2 && \
+    cd libtheora-1.1.1 && \
+    ./configure --host=arm-linux-gnueabihf --prefix=$SYSROOT/usr \
+        --disable-static --enable-shared \
+        --disable-examples --disable-spec --disable-encode && \
+    make -j$(nproc) && make install && \
+    rm -rf /tmp/libtheora-1.1.1*
+
+# Cross-compile SDL2_net (not on device)
+RUN SYSROOT=/opt/mmiyoo/arm-buildroot-linux-gnueabihf/sysroot && \
+    export PATH="/opt/mmiyoo/bin:$PATH" && \
+    export CC="arm-linux-gnueabihf-gcc" && \
+    export CFLAGS="--sysroot=$SYSROOT -marm -mtune=cortex-a7 -march=armv7ve+simd -mfpu=neon-vfpv4 -mfloat-abi=hard" && \
+    export LDFLAGS="--sysroot=$SYSROOT" && \
+    export PKG_CONFIG_LIBDIR="$SYSROOT/usr/lib/pkgconfig" && \
+    export PKG_CONFIG_SYSROOT_DIR="$SYSROOT" && \
+    cd /tmp && \
+    wget -q https://www.libsdl.org/projects/SDL_net/release/SDL2_net-2.2.0.tar.gz && \
+    tar xzf SDL2_net-2.2.0.tar.gz && \
+    cd SDL2_net-2.2.0 && \
+    ./configure --host=arm-linux-gnueabihf --prefix=$SYSROOT/usr \
+        --disable-static --enable-shared \
+        --with-sdl-prefix=$SYSROOT/usr && \
+    make -j$(nproc) && make install && \
+    rm -rf /tmp/SDL2_net-2.2.0*
+
+COPY build-mini.sh /build-mini.sh
+RUN chmod +x /build-mini.sh
+COPY patches/ /patches/
+
+WORKDIR /build
+ENTRYPOINT ["/build-mini.sh"]
