@@ -35,11 +35,14 @@ RUN SYSROOT=/opt/mmiyoo/arm-buildroot-linux-gnueabihf/sysroot && \
     export CROSS=/opt/mmiyoo/bin/arm-linux-gnueabihf- && \
     export CC="${CROSS}gcc" && \
     export CXX="${CROSS}g++" && \
+    export LDFLAGS="-L$SYSROOT/usr/lib -lmi_sys -lmi_gfx -lmi_ao -lmi_common -lEGL -lGLESv2" && \
     cd /tmp && \
     git clone --depth 1 https://github.com/XK9274/sdl2_miyoo.git && \
     cd sdl2_miyoo && \
     cp mmiyoo/inc/*.h $SYSROOT/usr/include/ && \
     cp mmiyoo/lib/*.so $SYSROOT/usr/lib/ && \
+    wget -q "https://github.com/XK9274/sdl2_miyoo/raw/vanilla/libEGL.so" -O $SYSROOT/usr/lib/libEGL.so && \
+    wget -q "https://github.com/XK9274/sdl2_miyoo/raw/vanilla/libGLESv2.so" -O $SYSROOT/usr/lib/libGLESv2.so && \
     wget -q -O sdl2/src/audio/mmiyoo/SDL_audio_mmiyoo.c \
         "https://raw.githubusercontent.com/XK9274/sdl2_miyoo/vanilla/src/audio/mmiyoo/SDL_audio_mmiyoo.c" && \
     cd sdl2 && \
