@@ -18,20 +18,14 @@ RUN apt-get update && \
 COPY mini_toolchain.tar.gz /tmp/
 RUN cd /tmp && tar xzf mini_toolchain.tar.gz && \
     mv mmiyoo /opt/mmiyoo && \
-    rm -rf prebuilt mini_toolchain.tar.gz
+    mv prebuilt /opt/prebuilt && \
+    rm -f mini_toolchain.tar.gz
 
 # Create cross pkg-config wrapper
 RUN SYSROOT=/opt/mmiyoo/arm-buildroot-linux-gnueabihf/sysroot && \
     printf '#!/bin/sh\nexport PKG_CONFIG_SYSROOT_DIR=%s\nexport PKG_CONFIG_LIBDIR=%s/usr/lib/pkgconfig\nexec pkg-config "$@"\n' \
     "$SYSROOT" "$SYSROOT" > /opt/mmiyoo/bin/arm-linux-gnueabihf-pkg-config && \
     chmod +x /opt/mmiyoo/bin/arm-linux-gnueabihf-pkg-config
-
-# Verify the cross-compiler works (debug: helps diagnose sysroot/toolchain issues)
-RUN export PATH="/opt/mmiyoo/bin:$PATH" && \
-    echo 'int main(){return 0;}' > /tmp/test.c && \
-    arm-linux-gnueabihf-gcc -v /tmp/test.c -o /tmp/test 2>&1 | tail -5 && \
-    file /tmp/test && \
-    rm -f /tmp/test.c /tmp/test
 
 # Build custom SDL2 with Miyoo Mini video/audio drivers (XK9274/sdl2_miyoo)
 # Main branch for MI vendor headers/libs + SDL2 source; audio fix from vanilla branch
