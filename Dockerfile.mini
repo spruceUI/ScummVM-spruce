@@ -31,12 +31,11 @@ RUN SYSROOT=/opt/mmiyoo/arm-buildroot-linux-gnueabihf/sysroot && \
 
 # Build custom SDL2 with Miyoo Mini video/audio drivers (XK9274/sdl2_miyoo)
 # Main branch for MI vendor headers/libs + SDL2 source; audio fix from vanilla branch
+# NOTE: no explicit --sysroot — the buildroot compiler has it built-in
 RUN SYSROOT=/opt/mmiyoo/arm-buildroot-linux-gnueabihf/sysroot && \
     export PATH="/opt/mmiyoo/bin:$PATH" && \
     export CC="arm-linux-gnueabihf-gcc" && \
     export CXX="arm-linux-gnueabihf-g++" && \
-    export CFLAGS="--sysroot=$SYSROOT -marm -mtune=cortex-a7 -march=armv7ve+simd -mfpu=neon-vfpv4 -mfloat-abi=hard" && \
-    export LDFLAGS="--sysroot=$SYSROOT" && \
     cd /tmp && \
     git clone --depth 1 https://github.com/XK9274/sdl2_miyoo.git && \
     cd sdl2_miyoo && \
@@ -63,8 +62,6 @@ RUN SYSROOT=/opt/mmiyoo/arm-buildroot-linux-gnueabihf/sysroot && \
 RUN SYSROOT=/opt/mmiyoo/arm-buildroot-linux-gnueabihf/sysroot && \
     export PATH="/opt/mmiyoo/bin:$PATH" && \
     export CC="arm-linux-gnueabihf-gcc" && \
-    export CFLAGS="--sysroot=$SYSROOT -marm -mtune=cortex-a7 -march=armv7ve+simd -mfpu=neon-vfpv4 -mfloat-abi=hard" && \
-    export LDFLAGS="--sysroot=$SYSROOT" && \
     export PKG_CONFIG_LIBDIR="$SYSROOT/usr/lib/pkgconfig" && \
     export PKG_CONFIG_SYSROOT_DIR="$SYSROOT" && \
     cd /tmp && \
@@ -81,8 +78,6 @@ RUN SYSROOT=/opt/mmiyoo/arm-buildroot-linux-gnueabihf/sysroot && \
 RUN SYSROOT=/opt/mmiyoo/arm-buildroot-linux-gnueabihf/sysroot && \
     export PATH="/opt/mmiyoo/bin:$PATH" && \
     export CC="arm-linux-gnueabihf-gcc" && \
-    export CFLAGS="--sysroot=$SYSROOT -marm -mtune=cortex-a7 -march=armv7ve+simd -mfpu=neon-vfpv4 -mfloat-abi=hard" && \
-    export LDFLAGS="--sysroot=$SYSROOT" && \
     export PKG_CONFIG_LIBDIR="$SYSROOT/usr/lib/pkgconfig" && \
     export PKG_CONFIG_SYSROOT_DIR="$SYSROOT" && \
     cd /tmp && \

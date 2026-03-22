@@ -38,9 +38,10 @@ export STRIP="${CROSS}-strip"
 export PKG_CONFIG_PATH="$SYSROOT/usr/lib/pkgconfig"
 export PKG_CONFIG_LIBDIR="$SYSROOT/usr/lib/pkgconfig"
 export PKG_CONFIG_SYSROOT_DIR="$SYSROOT"
-export CFLAGS="--sysroot=$SYSROOT -marm -mtune=cortex-a7 -march=armv7ve+simd -mfpu=neon-vfpv4 -mfloat-abi=hard -O2"
+# No explicit --sysroot: the buildroot compiler has it built-in
+export CFLAGS="-marm -mtune=cortex-a7 -march=armv7ve+simd -mfpu=neon-vfpv4 -mfloat-abi=hard -O2"
 export CXXFLAGS="$CFLAGS"
-export LDFLAGS="--sysroot=$SYSROOT -L$SYSROOT/usr/lib -static-libstdc++"
+export LDFLAGS="-L$SYSROOT/usr/lib -static-libstdc++"
 
 # Configure for Miyoo Mini: SDL2 backend, no OpenGL (software framebuffer only)
 ./configure \
