@@ -63,4 +63,19 @@ mkdir -p "$OUTPUT_DIR"
 cp scummvm "$OUTPUT_DIR/"
 ${CROSS}-strip "$OUTPUT_DIR/scummvm"
 
+# Bundle shared libs not available on the Mini device
+LIBS_DIR="$OUTPUT_DIR/libs"
+mkdir -p "$LIBS_DIR"
+for lib in libvorbisfile.so.3 libvorbis.so.0 libogg.so.0 libmad.so.0 \
+           libasound.so.2 libjpeg.so.9 libgif.so.7 libfreetype.so.6 \
+           libfribidi.so.0 libtheoradec.so.1 libSDL2_net-2.0.so.0; do
+    found=$(find "$SYSROOT" -name "${lib}*" -type f | head -1)
+    if [ -n "$found" ]; then
+        cp "$found" "$LIBS_DIR/$lib"
+        echo "Bundled: $lib"
+    else
+        echo "WARNING: $lib not found in sysroot"
+    fi
+done
+
 echo "=== Build complete: ${OUTPUT_DIR}/scummvm ==="
