@@ -96,43 +96,43 @@ with open('backends/graphics/surfacesdl/surfacesdl-graphics.cpp', 'w') as f:
 PYEOF
 echo "Patched surfacesdl for display rotation without rotation_mode"
 
-# Patch 2: Scale mouse coordinates from physical window to logical (swapped) space.
+# Patch 2: Scale mouse X from physical window to logical (swapped) space.
 # SDL constrains mouse to the physical portrait window (e.g. 480x640), but after
-# our dimension swap ScummVM expects landscape coords (640x480). Without this,
-# the mouse can't reach the right side of the screen.
+# our dimension swap ScummVM expects landscape width (640). The X axis can't reach
+# the right edge without scaling. Y axis is fine — excess range gets clipped by
+# the drawRect bounds in notifyMousePosition.
 python3 << 'PYEOF'
 with open('backends/graphics/sdl/sdl-graphics.cpp', 'r') as f:
     code = f.read()
 
-# Scale mouse coords in notifyMousePosition right after DPI scaling
+# Scale mouse X in notifyMousePosition right after DPI scaling
 old = '''\tmouse.x = (int)(mouse.x * dpiScale + 0.5f);
 \tmouse.y = (int)(mouse.y * dpiScale + 0.5f);'''
 
 new = '''\tmouse.x = (int)(mouse.x * dpiScale + 0.5f);
 \tmouse.y = (int)(mouse.y * dpiScale + 0.5f);
-\t// Scale mouse from physical window coords to logical (swapped) coords for rotated display
+\t// Scale mouse X from physical to logical width for rotated display.
+\t// Y is left alone — it has more range than needed and gets clipped by drawRect.
 \tif (SDL_getenv("DISPLAY_ROTATION") && (SDL_atoi(SDL_getenv("DISPLAY_ROTATION")) % 180 != 0)) {
 \t\tmouse.x = (mouse.x * _windowWidth + _windowHeight / 2) / _windowHeight;
-\t\tmouse.y = (mouse.y * _windowHeight + _windowWidth / 2) / _windowWidth;
 \t}'''
 
 assert old in code, 'Could not find dpiScale mouse assignment in sdl-graphics.cpp'
 code = code.replace(old, new)
 
-# Inverse-scale in setSystemMousePosition so SDL warp uses physical coords
+# Inverse-scale X in setSystemMousePosition so SDL warp uses physical coords
 old2 = '''void SdlGraphicsManager::setSystemMousePosition(const int x, const int y) {
 \tassert(_window);
 \tif (!_window->warpMouseInWindow(x, y)) {'''
 
 new2 = '''void SdlGraphicsManager::setSystemMousePosition(const int x, const int y) {
 \tassert(_window);
-\tint warpX = x, warpY = y;
-\t// Convert logical coords back to physical for SDL warp on rotated display
+\tint warpX = x;
+\t// Convert logical X back to physical for SDL warp on rotated display
 \tif (SDL_getenv("DISPLAY_ROTATION") && (SDL_atoi(SDL_getenv("DISPLAY_ROTATION")) % 180 != 0)) {
 \t\twarpX = (x * _windowHeight + _windowWidth / 2) / _windowWidth;
-\t\twarpY = (y * _windowWidth + _windowHeight / 2) / _windowHeight;
 \t}
-\tif (!_window->warpMouseInWindow(warpX, warpY)) {'''
+\tif (!_window->warpMouseInWindow(warpX, y)) {'''
 
 assert old2 in code, 'Could not find setSystemMousePosition in sdl-graphics.cpp'
 code = code.replace(old2, new2)
@@ -140,7 +140,7 @@ code = code.replace(old2, new2)
 with open('backends/graphics/sdl/sdl-graphics.cpp', 'w') as f:
     f.write(code)
 PYEOF
-echo "Patched sdl-graphics for mouse coordinate scaling on rotated display"
+echo "Patched sdl-graphics for mouse X scaling on rotated display"
 
 # A30 buildroot toolchain
 TOOLCHAIN=/opt/a30
