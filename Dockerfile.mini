@@ -27,6 +27,9 @@ RUN SYSROOT=/opt/mmiyoo/arm-buildroot-linux-gnueabihf/sysroot && \
     "$SYSROOT" "$SYSROOT" > /opt/mmiyoo/bin/arm-linux-gnueabihf-pkg-config && \
     chmod +x /opt/mmiyoo/bin/arm-linux-gnueabihf-pkg-config
 
+# Copy patches early (needed for SDL2 patching)
+COPY patches/ /patches/
+
 # Build custom SDL2 with Miyoo Mini video/audio drivers (XK9274/sdl2_miyoo)
 # Main branch for MI vendor headers/libs + SDL2 source; audio fix from vanilla branch
 # NOTE: no explicit --sysroot — the buildroot compiler has it built-in
@@ -45,62 +48,7 @@ RUN SYSROOT=/opt/mmiyoo/arm-buildroot-linux-gnueabihf/sysroot && \
     wget -q "https://github.com/XK9274/sdl2_miyoo/raw/vanilla/libGLESv2.so" -O $SYSROOT/usr/lib/libGLESv2.so && \
     wget -q -O sdl2/src/audio/mmiyoo/SDL_audio_mmiyoo.c \
         "https://raw.githubusercontent.com/XK9274/sdl2_miyoo/vanilla/src/audio/mmiyoo/SDL_audio_mmiyoo.c" && \
-    python3 -c "\
-import re; \
-fb = 'sdl2/src/video/mmiyoo/SDL_framebuffer_mmiyoo.c'; \
-s = open(fb).read(); \
-s = s.replace('#include \"SDL_framebuffer_mmiyoo.h\"', \
-    '#include \"SDL_framebuffer_mmiyoo.h\"\n#include \"SDL_video_mmiyoo.h\"\n#include <string.h>'); \
-old_func = '''int MMIYOO_UpdateWindowFramebuffer(_THIS, SDL_Window *window, const SDL_Rect *rects, int numrects)\n\
-{\n\
-    static int frame_number;\n\
-    SDL_Surface *surface;\n\
-\n\
-    surface = (SDL_Surface *) SDL_GetWindowData(window, MMIYOO_SURFACE);\n\
-    if(!surface) {\n\
-        return SDL_SetError(\"Couldn't find mmiyoo surface for window\");\n\
-    }\n\
-\n\
-    if(SDL_getenv(\"SDL_VIDEO_MMIYOO_SAVE_FRAMES\")) {\n\
-        char file[128];\n\
-        SDL_snprintf(file, sizeof(file), \"SDL_window%\" SDL_PRIu32 \"-%8.8d.bmp\",\n\
-                     SDL_GetWindowID(window), ++frame_number);\n\
-        SDL_SaveBMP(surface, file);\n\
-    }\n\
-    return 0;\n\
-}'''; \
-new_func = '''int MMIYOO_UpdateWindowFramebuffer(_THIS, SDL_Window *window, const SDL_Rect *rects, int numrects)\n\
-{\n\
-    SDL_Surface *surface;\n\
-    surface = (SDL_Surface *) SDL_GetWindowData(window, MMIYOO_SURFACE);\n\
-    if(!surface) {\n\
-        return SDL_SetError(\"Couldn't find mmiyoo surface for window\");\n\
-    }\n\
-    if (gfx.fb.virAddr) {\n\
-        int h;\n\
-        int copy_w = (surface->w < FB_W) ? surface->w : FB_W;\n\
-        int copy_h = (surface->h < FB_H) ? surface->h : FB_H;\n\
-        int dst_pitch = FB_W * FB_BPP;\n\
-        uint8_t *src = (uint8_t *)surface->pixels;\n\
-        uint8_t *dst = (uint8_t *)gfx.fb.virAddr + (FB_W * gfx.vinfo.yoffset * FB_BPP);\n\
-        for (h = 0; h < copy_h; h++) {\n\
-            memcpy(dst + h * dst_pitch, src + h * surface->pitch, copy_w * FB_BPP);\n\
-        }\n\
-        GFX_Flip();\n\
-    }\n\
-    return 0;\n\
-}'''; \
-s = s.replace(old_func, new_func); \
-open(fb, 'w').write(s); \
-print('Patched SDL2 framebuffer: direct fb write in UpdateWindowFramebuffer'); \
-vid = 'sdl2/src/video/mmiyoo/SDL_video_mmiyoo.c'; \
-v = open(vid).read(); \
-v = v.replace(\
-    'MI_SYS_Mmap(gfx.fb.phyAddr, gfx.finfo.smem_len, &gfx.fb.virAddr, TRUE);', \
-    'MI_SYS_Mmap(gfx.fb.phyAddr, gfx.finfo.smem_len, &gfx.fb.virAddr, TRUE);\n    if (!gfx.fb.virAddr) { gfx.fb.virAddr = mmap(0, gfx.finfo.smem_len, PROT_READ | PROT_WRITE, MAP_SHARED, gfx.fb_dev, 0); }'); \
-open(vid, 'w').write(v); \
-print('Patched SDL2 video: added mmap fallback for framebuffer'); \
-" && \
+    python3 /patches/mini/sdl2-direct-fb.py && \
     cd sdl2 && \
     (MOD=mmiyoo ./configure --host=arm-linux \
         --build=x86_64-linux-gnu \
@@ -151,7 +99,6 @@ RUN SYSROOT=/opt/mmiyoo/arm-buildroot-linux-gnueabihf/sysroot && \
 
 COPY build-mini.sh /build-mini.sh
 RUN chmod +x /build-mini.sh
-COPY patches/ /patches/
 
 WORKDIR /build
 ENTRYPOINT ["/build-mini.sh"]
