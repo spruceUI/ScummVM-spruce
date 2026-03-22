@@ -1,8 +1,8 @@
-FROM ubuntu:24.04
+FROM debian:buster
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Build tools — includes autotools for building SDL2 from source
+# Build tools (debian:buster to match the sdl2_miyoo toolchain environment)
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     build-essential \
@@ -12,9 +12,6 @@ RUN apt-get update && \
     python3 \
     wget \
     ccache \
-    autoconf \
-    automake \
-    libtool \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Miyoo Mini toolchain (steward-fu, same toolchain used by sdl2_miyoo)
