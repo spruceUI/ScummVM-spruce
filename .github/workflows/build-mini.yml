@@ -86,6 +86,3 @@ jobs:
         run: |
           mv output/scummvm output/scummvm.mini
           gh release upload "latest" output/scummvm.mini --clobber
-          cd output
-          tar czf scummvm-mini-libs.tar.gz libtheoradec.so.1* libSDL2_net-2.0.so.0*
-          gh release upload "latest" scummvm-mini-libs.tar.gz --clobber

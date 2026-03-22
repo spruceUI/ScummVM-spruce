@@ -41,12 +41,13 @@ export PKG_CONFIG_SYSROOT_DIR="$SYSROOT"
 # No explicit --sysroot: the buildroot compiler has it built-in
 export CFLAGS="-marm -mtune=cortex-a7 -march=armv7ve+simd -mfpu=neon-vfpv4 -mfloat-abi=hard -O2"
 export CXXFLAGS="$CFLAGS"
-export LDFLAGS="-L$SYSROOT/usr/lib -static-libstdc++"
+export LDFLAGS="-L$SYSROOT/usr/lib"
 
-# Configure for Miyoo Mini: SDL2 backend, no OpenGL (software framebuffer only)
+# Configure for Miyoo Mini: SDL2 backend, static build (Mini has very few system libs)
 ./configure \
     --host=arm-linux-gnueabihf \
     --backend=sdl \
+    --enable-static \
     --enable-optimizations \
     --enable-release \
     --disable-debug \
@@ -61,9 +62,5 @@ make -j$(nproc)
 mkdir -p "$OUTPUT_DIR"
 cp scummvm "$OUTPUT_DIR/"
 ${CROSS}-strip "$OUTPUT_DIR/scummvm"
-
-# Bundle libs not on device
-cp "$SYSROOT/usr/lib/libtheoradec.so.1"* "$OUTPUT_DIR/"
-cp "$SYSROOT/usr/lib/libSDL2_net-2.0.so.0"* "$OUTPUT_DIR/"
 
 echo "=== Build complete: ${OUTPUT_DIR}/scummvm ==="
