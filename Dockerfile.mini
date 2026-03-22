@@ -52,7 +52,6 @@ RUN SYSROOT=/opt/mmiyoo/arm-buildroot-linux-gnueabihf/sysroot && \
     wget -q -O sdl2/src/audio/mmiyoo/SDL_audio_mmiyoo.c \
         "https://raw.githubusercontent.com/XK9274/sdl2_miyoo/vanilla/src/audio/mmiyoo/SDL_audio_mmiyoo.c" && \
     cd sdl2 && \
-    ./autogen.sh && \
     MOD=mmiyoo ./configure --host=arm-linux \
         --prefix=$SYSROOT/usr \
         --disable-joystick-virtual --disable-jack --disable-power --disable-sensor \
