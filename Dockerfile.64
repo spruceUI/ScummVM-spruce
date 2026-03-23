@@ -1,0 +1,79 @@
+FROM ubuntu:20.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Configure multiarch for arm64 cross-compilation
+# Ubuntu 20.04 (focal) provides glibc 2.31 — oldest among 64-bit SpruceOS devices
+RUN dpkg --add-architecture arm64 && \
+    sed -i 's/^deb http/deb [arch=amd64] http/g' /etc/apt/sources.list && \
+    echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports focal main restricted universe multiverse" >> /etc/apt/sources.list && \
+    echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports focal-updates main restricted universe multiverse" >> /etc/apt/sources.list && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+    build-essential \
+    gcc-aarch64-linux-gnu \
+    g++-aarch64-linux-gnu \
+    pkg-config \
+    git \
+    ca-certificates \
+    python3 \
+    wget \
+    ccache \
+    cmake \
+    libsdl2-dev:arm64 \
+    libsdl2-net-dev:arm64 \
+    libasound2-dev:arm64 \
+    libfreetype6-dev:arm64 \
+    libgles2-mesa-dev:arm64 \
+    libegl1-mesa-dev:arm64 \
+    libjpeg-dev:arm64 \
+    libgif-dev:arm64 \
+    libfribidi-dev:arm64 \
+    libtheora-dev:arm64 \
+    libmpeg2-4-dev:arm64 \
+    libfaad-dev:arm64 \
+    liba52-0.7.4-dev:arm64 \
+    libcurl4-openssl-dev:arm64 \
+    libspeechd-dev:arm64 \
+    libpng-dev:arm64 \
+    zlib1g-dev:arm64 \
+    libmad0-dev:arm64 \
+    libogg-dev:arm64 \
+    libvorbis-dev:arm64 \
+    libflac-dev:arm64 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Cross-compile FluidSynth 2.3.4 (not available as arm64 apt package on focal)
+RUN export CC=aarch64-linux-gnu-gcc && \
+    export CXX=aarch64-linux-gnu-g++ && \
+    cd /tmp && \
+    git clone --depth 1 --branch v2.3.4 https://github.com/FluidSynth/fluidsynth.git && \
+    cd fluidsynth && \
+    mkdir build && cd build && \
+    cmake -DCMAKE_INSTALL_PREFIX=/usr \
+        -DCMAKE_SYSTEM_NAME=Linux \
+        -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
+        -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
+        -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
+        -DCMAKE_FIND_ROOT_PATH=/usr/aarch64-linux-gnu \
+        -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=BOTH \
+        -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=BOTH \
+        -DLIB_SUFFIX="" \
+        -Denable-libsndfile=off \
+        -Denable-dbus=off \
+        -Denable-pulseaudio=off \
+        -Denable-jack=off \
+        -Denable-pipewire=off \
+        -Denable-readline=off \
+        -Denable-sdl2=off \
+        .. && \
+    make -j$(nproc) && \
+    make install && \
+    rm -rf /tmp/fluidsynth
+
+COPY build-64.sh /build-64.sh
+RUN chmod +x /build-64.sh
+COPY patches/ /patches/
+
+WORKDIR /build
+ENTRYPOINT ["/build-64.sh"]

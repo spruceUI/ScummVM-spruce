@@ -21,3 +21,8 @@ jobs:
     uses: ./.github/workflows/build-mini.yml
     with:
       scummvm_version: ${{ inputs.scummvm_version }}
+
+  64bit:
+    uses: ./.github/workflows/build-64.yml
+    with:
+      scummvm_version: ${{ inputs.scummvm_version }}
