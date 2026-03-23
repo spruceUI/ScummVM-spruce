@@ -41,6 +41,7 @@ RUN dpkg --add-architecture arm64 && \
     libogg-dev:arm64 \
     libvorbis-dev:arm64 \
     libflac-dev:arm64 \
+    libglib2.0-dev:arm64 \
     && rm -rf /var/lib/apt/lists/*
 
 # Create CMake toolchain file for aarch64 cross-compilation
@@ -49,31 +50,29 @@ set(CMAKE_SYSTEM_NAME Linux)\n\
 set(CMAKE_SYSTEM_PROCESSOR aarch64)\n\
 set(CMAKE_C_COMPILER aarch64-linux-gnu-gcc)\n\
 set(CMAKE_CXX_COMPILER aarch64-linux-gnu-g++)\n\
-set(CMAKE_FIND_ROOT_PATH /usr/aarch64-linux-gnu /usr/lib/aarch64-linux-gnu)\n\
+set(CMAKE_FIND_ROOT_PATH /usr/aarch64-linux-gnu /usr/lib/aarch64-linux-gnu /usr)\n\
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)\n\
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY BOTH)\n\
 set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE BOTH)\n\
 set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE BOTH)\n\
+set(PKG_CONFIG_EXECUTABLE /usr/bin/pkg-config)\n\
+set(ENV{PKG_CONFIG_PATH} "/usr/lib/aarch64-linux-gnu/pkgconfig")\n\
+set(ENV{PKG_CONFIG_LIBDIR} "/usr/lib/aarch64-linux-gnu/pkgconfig")\n\
 ' > /tmp/aarch64-toolchain.cmake
 
-# Cross-compile FluidSynth 2.3.4 (not available as arm64 apt package on focal)
+# Cross-compile FluidSynth 2.3.4 (not in focal repos)
 RUN cd /tmp && \
     git clone --depth 1 --branch v2.3.4 https://github.com/FluidSynth/fluidsynth.git && \
-    cd fluidsynth && \
-    mkdir build && cd build && \
+    cd fluidsynth && mkdir build && cd build && \
     cmake -DCMAKE_TOOLCHAIN_FILE=/tmp/aarch64-toolchain.cmake \
         -DCMAKE_INSTALL_PREFIX=/usr \
-        -DLIB_SUFFIX="" \
-        -Denable-libsndfile=off \
-        -Denable-dbus=off \
-        -Denable-pulseaudio=off \
-        -Denable-jack=off \
-        -Denable-pipewire=off \
-        -Denable-readline=off \
+        -DCMAKE_INSTALL_LIBDIR=lib/aarch64-linux-gnu \
+        -Denable-libsndfile=off -Denable-dbus=off \
+        -Denable-pulseaudio=off -Denable-jack=off \
+        -Denable-pipewire=off -Denable-readline=off \
         -Denable-sdl2=off \
         .. && \
-    make -j$(nproc) && \
-    make install && \
+    make -j$(nproc) && make install && \
     rm -rf /tmp/fluidsynth
 
 COPY build-64.sh /build-64.sh
