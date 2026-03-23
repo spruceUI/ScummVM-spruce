@@ -19,6 +19,7 @@ OLD = '''	_renderer = SDL_CreateRenderer(_window->getSDLWindow(), -1, rendererFl
 #endif
 	if (!_renderer) {
 		if (_videoMode.vsync) {
+			// VSYNC might not be available, so retry without VSYNC
 			warning("SDL_SetVideoMode: SDL_CreateRenderer() failed with VSYNC option, retrying without it...");
 			_videoMode.vsync = false;
 #if SDL_VERSION_ATLEAST(3, 0, 0)
@@ -42,6 +43,7 @@ NEW = '''	_renderer = SDL_CreateRenderer(_window->getSDLWindow(), -1, rendererFl
 #endif
 	if (!_renderer) {
 		if (_videoMode.vsync) {
+			// VSYNC might not be available, so retry without VSYNC
 			warning("SDL_SetVideoMode: SDL_CreateRenderer() failed with VSYNC option, retrying without it...");
 			_videoMode.vsync = false;
 #if SDL_VERSION_ATLEAST(3, 0, 0)
