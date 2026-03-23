@@ -37,6 +37,7 @@ static int _directFbH = 0;
 static int _directFbStride = 0;
 static int _directFbSize = 0;
 static int _directFbYOffset = 0;
+static int _directFbRotation = 0;
 #endif'''
 
 if BEFORE_SCUMMVM not in src:
@@ -100,6 +101,8 @@ FB_INIT = '''	getWindowSizeFromSdl(&_windowWidth, &_windowHeight);
 					memset(_directFbMmap, 0, _directFbSize);
 				}
 			}
+			const char *rotEnv = SDL_getenv("DISPLAY_ROTATION");
+			if (rotEnv) _directFbRotation = SDL_atoi(rotEnv);
 		}
 		return screen;
 	}
@@ -142,11 +145,20 @@ NEW_UPDATE = '''void SurfaceSdlGraphicsManager::SDL_UpdateRects(SDL_Surface *scr
 			memset(dstBase + y * _directFbStride, 0, _directFbStride);
 		for (int y = dstY + copyH; y < _directFbH; y++)
 			memset(dstBase + y * _directFbStride, 0, _directFbStride);
-		// Copy rows with side border clearing
+		// Copy rows with side border clearing (with optional 180° rotation)
 		for (int y = 0; y < copyH; y++) {
-			uint8_t *row = dstBase + (dstY + y) * _directFbStride;
+			int outY = (_directFbRotation == 180) ? (dstY + copyH - 1 - y) : (dstY + y);
+			uint8_t *row = dstBase + outY * _directFbStride;
 			if (dstX > 0) memset(row, 0, dstX * 4);
-			memcpy(row + dstX * 4, srcPx + y * srcPitch, copyW * 4);
+			if (_directFbRotation == 180) {
+				// Reverse pixels in row for 180° rotation
+				uint32_t *dst32 = (uint32_t *)(row + dstX * 4);
+				uint32_t *src32 = (uint32_t *)(srcPx + y * srcPitch);
+				for (int x = 0; x < copyW; x++)
+					dst32[x] = src32[copyW - 1 - x];
+			} else {
+				memcpy(row + dstX * 4, srcPx + y * srcPitch, copyW * 4);
+			}
 			int right = (dstX + copyW) * 4;
 			if (right < _directFbStride) memset(row + right, 0, _directFbStride - right);
 		}
