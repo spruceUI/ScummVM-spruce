@@ -12,40 +12,24 @@ with open(PATH) as f:
     src = f.read()
 
 # ── Patch 1: Add includes and static fb state after the include block ──
-AFTER_INCLUDES = '#include "common/text-to-speech.h"'
-FB_HEADER = '''#include "common/text-to-speech.h"
-
-// Direct framebuffer rendering for Miyoo Mini (bypasses broken MI_GFX)
-// NOTE: We cannot #include <linux/fb.h> because it triggers ScummVM's
-// forbidden symbol guards. Define the needed constants directly instead.
+# Insert fb includes BEFORE ScummVM headers to avoid forbidden symbol conflicts
+BEFORE_SCUMMVM = '#include "common/scummsys.h"'
+FB_HEADER_TOP = '''// Direct framebuffer rendering for Miyoo Mini (bypasses broken MI_GFX)
+// Must be included before ScummVM headers which set up forbidden symbol traps
 #if defined(__linux__)
+#include <linux/fb.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/mman.h>
 #include <sys/ioctl.h>
-#ifndef FBIOGET_VSCREENINFO
-struct fb_bitfield { uint32_t offset, length, msb_right; };
-struct fb_var_screeninfo {
-	uint32_t xres, yres, xres_virtual, yres_virtual;
-	uint32_t xoffset, yoffset, bits_per_pixel, grayscale;
-	struct fb_bitfield red, green, blue, transp;
-	uint32_t nonstd, activate, height, width;
-	uint32_t accel_flags; uint32_t pixclock;
-	uint32_t left_margin, right_margin, upper_margin, lower_margin;
-	uint32_t hsync_len, vsync_len, sync, vmode, rotate, colorspace;
-	uint32_t reserved[4];
-};
-struct fb_fix_screeninfo {
-	char id[16]; unsigned long smem_start; uint32_t smem_len;
-	uint32_t type, type_aux, visual; uint16_t xpanstep, ypanstep, ywrapstep;
-	uint32_t line_length; unsigned long mmio_start; uint32_t mmio_len;
-	uint32_t accel; uint16_t capabilities; uint16_t reserved[2];
-};
-#define FBIOGET_VSCREENINFO 0x4600
-#define FBIOPUT_VSCREENINFO 0x4601
-#define FBIOGET_FSCREENINFO 0x4602
-#define FBIOPAN_DISPLAY     0x4606
 #endif
+
+#include "common/scummsys.h"'''
+
+AFTER_INCLUDES = '#include "common/text-to-speech.h"'
+FB_HEADER = '''#include "common/text-to-speech.h"
+
+#if defined(__linux__)
 static int _directFbFd = -1;
 static void *_directFbMmap = (void*)-1; // MAP_FAILED
 static int _directFbW = 0;
@@ -55,11 +39,17 @@ static int _directFbSize = 0;
 static int _directFbYOffset = 0;
 #endif'''
 
+if BEFORE_SCUMMVM not in src:
+    print(f'ERROR: cannot find scummsys.h include in {PATH}', file=sys.stderr)
+    sys.exit(1)
+src = src.replace(BEFORE_SCUMMVM, FB_HEADER_TOP, 1)
+print('Patch 1a: Added fb system includes before ScummVM headers')
+
 if AFTER_INCLUDES not in src:
     print(f'ERROR: cannot find include anchor in {PATH}', file=sys.stderr)
     sys.exit(1)
 src = src.replace(AFTER_INCLUDES, FB_HEADER, 1)
-print('Patch 1: Added fb includes and state variables')
+print('Patch 1b: Added fb state variables')
 
 # ── Patch 2: In SDL_SetVideoMode, add direct fb init path (early return) ──
 # Insert before the format/texture creation, right after handleResize
