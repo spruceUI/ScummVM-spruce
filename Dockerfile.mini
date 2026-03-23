@@ -27,10 +27,9 @@ RUN SYSROOT=/opt/mmiyoo/arm-buildroot-linux-gnueabihf/sysroot && \
     "$SYSROOT" "$SYSROOT" > /opt/mmiyoo/bin/arm-linux-gnueabihf-pkg-config && \
     chmod +x /opt/mmiyoo/bin/arm-linux-gnueabihf-pkg-config
 
-# Copy patches early (needed for SDL2 patching)
-COPY patches/ /patches/
-
 # Build custom SDL2 with Miyoo Mini video/audio drivers (XK9274/sdl2_miyoo)
+# NOTE: SDL2 .so is NOT bundled — device SDL2 is used at runtime.
+# We build SDL2 here only for compile-time headers and link stub.
 # Main branch for MI vendor headers/libs + SDL2 source; audio fix from vanilla branch
 # NOTE: no explicit --sysroot — the buildroot compiler has it built-in
 RUN SYSROOT=/opt/mmiyoo/arm-buildroot-linux-gnueabihf/sysroot && \
@@ -48,7 +47,6 @@ RUN SYSROOT=/opt/mmiyoo/arm-buildroot-linux-gnueabihf/sysroot && \
     wget -q "https://github.com/XK9274/sdl2_miyoo/raw/vanilla/libGLESv2.so" -O $SYSROOT/usr/lib/libGLESv2.so && \
     wget -q -O sdl2/src/audio/mmiyoo/SDL_audio_mmiyoo.c \
         "https://raw.githubusercontent.com/XK9274/sdl2_miyoo/vanilla/src/audio/mmiyoo/SDL_audio_mmiyoo.c" && \
-    python3 /patches/mini/sdl2-direct-fb.py && \
     cd sdl2 && \
     (MOD=mmiyoo ./configure --host=arm-linux \
         --build=x86_64-linux-gnu \
@@ -99,6 +97,7 @@ RUN SYSROOT=/opt/mmiyoo/arm-buildroot-linux-gnueabihf/sysroot && \
 
 COPY build-mini.sh /build-mini.sh
 RUN chmod +x /build-mini.sh
+COPY patches/ /patches/
 
 WORKDIR /build
 ENTRYPOINT ["/build-mini.sh"]

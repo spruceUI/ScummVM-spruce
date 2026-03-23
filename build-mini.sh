@@ -24,6 +24,11 @@ for dir in /patches/common /patches/mini; do
     fi
 done
 
+# Apply ScummVM direct framebuffer patch for Miyoo Mini
+if [ -f /patches/mini/scummvm-direct-fb.py ]; then
+    python3 /patches/mini/scummvm-direct-fb.py
+fi
+
 # Miyoo Mini toolchain (steward-fu, cortex-a7)
 TOOLCHAIN=/opt/mmiyoo
 SYSROOT=$TOOLCHAIN/arm-buildroot-linux-gnueabihf/sysroot
@@ -67,11 +72,7 @@ ${CROSS}-strip "$OUTPUT_DIR/scummvm"
 LIBS_DIR="$OUTPUT_DIR/libs"
 mkdir -p "$LIBS_DIR"
 
-# SDL2 must come from the known install path (not find) because the sysroot
-# also contains the old buildroot SDL2 and find may pick the wrong one
-cp -L "$SYSROOT/usr/lib/libSDL2-2.0.so.0" "$LIBS_DIR/libSDL2-2.0.so.0"
-echo "Bundled: libSDL2-2.0.so.0"
-
+# SDL2 is NOT bundled — device SDL2 from spruce/miyoomini/lib/ is used at runtime
 for lib in libvorbisfile.so.3 libvorbis.so.0 libogg.so.0 libmad.so.0 \
            libasound.so.2 libjpeg.so.9 libgif.so.7 libfreetype.so.6 \
            libfribidi.so.0 libtheoradec.so.1 libSDL2_net-2.0.so.0; do
