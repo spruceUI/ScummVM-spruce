@@ -142,6 +142,14 @@ with open('backends/graphics/sdl/sdl-graphics.cpp', 'w') as f:
 PYEOF
 echo "Patched sdl-graphics for mouse X scaling on rotated display"
 
+# Apply common Python patches
+if [ -d /patches/common ] && ls /patches/common/*.py 1>/dev/null 2>&1; then
+    for patch in /patches/common/*.py; do
+        echo "Applying: $(basename "$patch")"
+        python3 "$patch"
+    done
+fi
+
 # A30 buildroot toolchain
 TOOLCHAIN=/opt/a30
 SYSROOT=$TOOLCHAIN/arm-a30-linux-gnueabihf/sysroot

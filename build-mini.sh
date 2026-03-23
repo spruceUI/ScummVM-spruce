@@ -24,10 +24,15 @@ for dir in /patches/common /patches/mini; do
     fi
 done
 
-# Apply ScummVM direct framebuffer patch for Miyoo Mini
-if [ -f /patches/mini/scummvm-direct-fb.py ]; then
-    python3 /patches/mini/scummvm-direct-fb.py
-fi
+# Apply Python patches (common + mini)
+for dir in /patches/common /patches/mini; do
+    if [ -d "$dir" ] && ls "$dir"/*.py 1>/dev/null 2>&1; then
+        for patch in "$dir"/*.py; do
+            echo "Applying: $(basename "$patch")"
+            python3 "$patch"
+        done
+    fi
+done
 
 # Miyoo Mini toolchain (steward-fu, cortex-a7)
 TOOLCHAIN=/opt/mmiyoo
