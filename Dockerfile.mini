@@ -85,14 +85,8 @@ RUN cd /tmp && \
     make CC=arm-linux-gnueabihf-gcc PREFIX=$SYSROOT/usr install && \
     rm -rf /tmp/giflib-*
 
-# libmpeg2
-RUN cd /tmp && \
-    wget -q https://deb.debian.org/debian/pool/main/libm/libmpeg2/libmpeg2_0.5.1.orig.tar.gz -O libmpeg2-0.5.1.tar.gz && \
-    tar xzf libmpeg2-0.5.1.tar.gz && cd libmpeg2-0.5.1 && \
-    ./configure --host=arm-linux-gnueabihf --prefix=$SYSROOT/usr \
-        --disable-static --enable-shared --disable-sdl && \
-    make -j$(nproc) && make install && \
-    rm -rf /tmp/libmpeg2-*
+# TODO: libmpeg2 — sourceforge/debian mirrors unreliable, only needed for 2 engines
+# (Alcachofa, QD Engine). Add later when we find a reliable source.
 
 COPY build-mini.sh /build-mini.sh
 RUN chmod +x /build-mini.sh
