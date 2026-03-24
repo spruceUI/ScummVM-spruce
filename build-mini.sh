@@ -34,9 +34,10 @@ for dir in /patches/common /patches/mini; do
     fi
 done
 
-# shauninman miyoomini toolchain (SDL1.2, cortex-a7)
+# OnionOS miyoomini toolchain (SDL1.2 + MMIYOO drivers, cortex-a7)
 TOOLCHAIN=/opt/miyoomini-toolchain
-export PATH="$TOOLCHAIN/bin:$PATH"
+SYSROOT=$TOOLCHAIN/arm-linux-gnueabihf/libc
+export PATH="$TOOLCHAIN/bin:$SYSROOT/usr/bin:$PATH"
 export CXX="ccache arm-linux-gnueabihf-g++"
 export CCACHE_DIR="${CCACHE_DIR:-/ccache}"
 
