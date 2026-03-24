@@ -87,7 +87,7 @@ RUN cd /tmp && \
 
 # libmpeg2
 RUN cd /tmp && \
-    wget -q https://libmpeg2.sourceforge.io/files/libmpeg2-0.5.1.tar.gz && \
+    wget -q https://deb.debian.org/debian/pool/main/libm/libmpeg2/libmpeg2_0.5.1.orig.tar.gz -O libmpeg2-0.5.1.tar.gz && \
     tar xzf libmpeg2-0.5.1.tar.gz && cd libmpeg2-0.5.1 && \
     ./configure --host=arm-linux-gnueabihf --prefix=$SYSROOT/usr \
         --disable-static --enable-shared --disable-sdl && \
