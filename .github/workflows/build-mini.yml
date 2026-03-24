@@ -84,3 +84,6 @@ jobs:
           cd output
           tar czf scummvm-mini-data.tar.gz plugins/ Theme/ Extra/
           gh release upload "latest" scummvm-mini-data.tar.gz --clobber
+          cd libs
+          tar czf ../scummvm-mini-libs.tar.gz *.so*
+          gh release upload "latest" ../scummvm-mini-libs.tar.gz --clobber

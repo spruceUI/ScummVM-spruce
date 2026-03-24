@@ -82,4 +82,18 @@ cp backends/vkeybd/packs/vkeybd_small.zip "$OUTPUT_DIR/Extra/"
 # Soundfont
 cp dists/soundfonts/Roland_SC-55.sf2 "$OUTPUT_DIR/Extra/" 2>/dev/null || true
 
+# Bundle shared libs not available on the Mini device
+LIBS_DIR="$OUTPUT_DIR/libs"
+mkdir -p "$LIBS_DIR"
+for lib in libjpeg.so.62 libvorbisfile.so.3 libvorbis.so.0 libogg.so.0 \
+           libgif.so.7 libtheoradec.so.1; do
+    found=$(find "$SYSROOT" -name "${lib}*" -type f 2>/dev/null | head -1)
+    if [ -n "$found" ]; then
+        cp "$found" "$LIBS_DIR/$lib"
+        echo "Bundled: $lib"
+    else
+        echo "WARNING: $lib not found in sysroot"
+    fi
+done
+
 echo "=== Build complete ==="
