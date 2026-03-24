@@ -12,6 +12,7 @@ RUN apt-get update && \
     python3 \
     wget \
     ccache \
+    cmake \
     && rm -rf /var/lib/apt/lists/*
 
 # Install OnionOS Miyoo Mini toolchain (SDL1.2 + MMIYOO drivers + FreeType2 + libmad)
