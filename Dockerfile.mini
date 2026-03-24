@@ -11,89 +11,17 @@ RUN apt-get update && \
     ca-certificates \
     python3 \
     wget \
+    xz-utils \
     ccache \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Miyoo Mini toolchain (steward-fu, same toolchain used by sdl2_miyoo)
-COPY mini_toolchain.tar.gz /tmp/
-RUN cd /tmp && tar xzf mini_toolchain.tar.gz && \
-    mv mmiyoo /opt/mmiyoo && \
-    mv prebuilt /opt/prebuilt && \
-    rm -f mini_toolchain.tar.gz
-
-# Create cross pkg-config wrapper
-RUN SYSROOT=/opt/mmiyoo/arm-buildroot-linux-gnueabihf/sysroot && \
-    printf '#!/bin/sh\nexport PKG_CONFIG_SYSROOT_DIR=%s\nexport PKG_CONFIG_LIBDIR=%s/usr/lib/pkgconfig\nexec pkg-config "$@"\n' \
-    "$SYSROOT" "$SYSROOT" > /opt/mmiyoo/bin/arm-linux-gnueabihf-pkg-config && \
-    chmod +x /opt/mmiyoo/bin/arm-linux-gnueabihf-pkg-config
-
-# Build custom SDL2 with Miyoo Mini video/audio drivers (XK9274/sdl2_miyoo)
-# NOTE: SDL2 .so is NOT bundled — device SDL2 is used at runtime.
-# We build SDL2 here only for compile-time headers and link stub.
-# Main branch for MI vendor headers/libs + SDL2 source; audio fix from vanilla branch
-# NOTE: no explicit --sysroot — the buildroot compiler has it built-in
-RUN SYSROOT=/opt/mmiyoo/arm-buildroot-linux-gnueabihf/sysroot && \
-    export PATH="/opt/mmiyoo/bin:$PATH" && \
-    export CROSS=/opt/mmiyoo/bin/arm-linux-gnueabihf- && \
-    export CC="${CROSS}gcc" && \
-    export CXX="${CROSS}g++" && \
-    export LDFLAGS="-L$SYSROOT/usr/lib -lmi_sys -lmi_gfx -lmi_ao -lmi_common -lEGL -lGLESv2" && \
-    cd /tmp && \
-    git clone --depth 1 https://github.com/XK9274/sdl2_miyoo.git && \
-    cd sdl2_miyoo && \
-    cp mmiyoo/inc/*.h $SYSROOT/usr/include/ && \
-    cp mmiyoo/lib/*.so $SYSROOT/usr/lib/ && \
-    wget -q "https://github.com/XK9274/sdl2_miyoo/raw/vanilla/libEGL.so" -O $SYSROOT/usr/lib/libEGL.so && \
-    wget -q "https://github.com/XK9274/sdl2_miyoo/raw/vanilla/libGLESv2.so" -O $SYSROOT/usr/lib/libGLESv2.so && \
-    wget -q -O sdl2/src/audio/mmiyoo/SDL_audio_mmiyoo.c \
-        "https://raw.githubusercontent.com/XK9274/sdl2_miyoo/vanilla/src/audio/mmiyoo/SDL_audio_mmiyoo.c" && \
-    cd sdl2 && \
-    (MOD=mmiyoo ./configure --host=arm-linux \
-        --build=x86_64-linux-gnu \
-        --prefix=$SYSROOT/usr \
-        --disable-joystick-virtual --disable-jack --disable-power --disable-sensor \
-        --disable-ime --disable-dbus --disable-fcitx --disable-hidapi --disable-libudev \
-        --disable-video-x11 --disable-video-kmsdrm --disable-video-vulkan \
-        --disable-video-opengl --disable-video-opengles --disable-video-opengles2 \
-        --disable-video-wayland --disable-video-dummy \
-        --disable-oss --disable-alsa --disable-sndio --disable-diskaudio \
-        --disable-pulseaudio --disable-dummyaudio \
-     || (echo "=== config.log ===" && cat config.log && exit 1)) && \
-    make -j$(nproc) && \
-    make install && \
-    rm -rf /tmp/sdl2_miyoo
-
-# Cross-compile libtheora (not on device)
-RUN SYSROOT=/opt/mmiyoo/arm-buildroot-linux-gnueabihf/sysroot && \
-    export PATH="/opt/mmiyoo/bin:$PATH" && \
-    export CC="arm-linux-gnueabihf-gcc" && \
-    export PKG_CONFIG_LIBDIR="$SYSROOT/usr/lib/pkgconfig" && \
-    export PKG_CONFIG_SYSROOT_DIR="$SYSROOT" && \
-    cd /tmp && \
-    wget -q https://downloads.xiph.org/releases/theora/libtheora-1.1.1.tar.bz2 && \
-    tar xjf libtheora-1.1.1.tar.bz2 && \
-    cd libtheora-1.1.1 && \
-    ./configure --host=arm-linux-gnueabihf --prefix=$SYSROOT/usr \
-        --disable-static --enable-shared \
-        --disable-examples --disable-spec --disable-encode && \
-    make -j$(nproc) && make install && \
-    rm -rf /tmp/libtheora-1.1.1*
-
-# Cross-compile SDL2_net (not on device)
-RUN SYSROOT=/opt/mmiyoo/arm-buildroot-linux-gnueabihf/sysroot && \
-    export PATH="/opt/mmiyoo/bin:$PATH" && \
-    export CC="arm-linux-gnueabihf-gcc" && \
-    export PKG_CONFIG_LIBDIR="$SYSROOT/usr/lib/pkgconfig" && \
-    export PKG_CONFIG_SYSROOT_DIR="$SYSROOT" && \
-    cd /tmp && \
-    wget -q https://www.libsdl.org/projects/SDL_net/release/SDL2_net-2.2.0.tar.gz && \
-    tar xzf SDL2_net-2.2.0.tar.gz && \
-    cd SDL2_net-2.2.0 && \
-    ./configure --host=arm-linux-gnueabihf --prefix=$SYSROOT/usr \
-        --disable-static --enable-shared \
-        --with-sdl-prefix=$SYSROOT/usr && \
-    make -j$(nproc) && make install && \
-    rm -rf /tmp/SDL2_net-2.2.0*
+# Install shauninman Miyoo Mini toolchain (SDL1.2 + MMIYOO drivers included)
+# This is the same toolchain used by the upstream ScummVM miyoomini build
+RUN wget -q -O /tmp/toolchain.tar.xz \
+        "https://github.com/shauninman/miyoomini-toolchain-buildroot/releases/download/v0.0.3/miyoomini-toolchain.tar.xz" && \
+    mkdir -p /opt/miyoomini-toolchain && \
+    tar xf /tmp/toolchain.tar.xz -C /opt/miyoomini-toolchain --strip-components=1 && \
+    rm /tmp/toolchain.tar.xz
 
 COPY build-mini.sh /build-mini.sh
 RUN chmod +x /build-mini.sh

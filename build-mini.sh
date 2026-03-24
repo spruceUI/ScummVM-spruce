@@ -4,7 +4,7 @@ set -e
 SCUMMVM_VERSION="${SCUMMVM_VERSION:-v2026.1.0}"
 OUTPUT_DIR="${OUTPUT_DIR:-/output}"
 
-echo "=== Building ScummVM ${SCUMMVM_VERSION} for Miyoo Mini (armhf) ==="
+echo "=== Building ScummVM ${SCUMMVM_VERSION} for Miyoo Mini (SDL1.2, --host=miyoomini) ==="
 
 # Clone ScummVM
 if [ ! -d "scummvm" ]; then
@@ -24,7 +24,7 @@ for dir in /patches/common /patches/mini; do
     fi
 done
 
-# Apply Python patches (common + mini)
+# Apply Python patches
 for dir in /patches/common /patches/mini; do
     if [ -d "$dir" ] && ls "$dir"/*.py 1>/dev/null 2>&1; then
         for patch in "$dir"/*.py; do
@@ -34,113 +34,51 @@ for dir in /patches/common /patches/mini; do
     fi
 done
 
-# Miyoo Mini toolchain (steward-fu, cortex-a7)
-TOOLCHAIN=/opt/mmiyoo
-SYSROOT=$TOOLCHAIN/arm-buildroot-linux-gnueabihf/sysroot
-CROSS=arm-linux-gnueabihf
-
+# shauninman miyoomini toolchain (SDL1.2, cortex-a7)
+TOOLCHAIN=/opt/miyoomini-toolchain
 export PATH="$TOOLCHAIN/bin:$PATH"
+export CXX="ccache arm-linux-gnueabihf-g++"
 export CCACHE_DIR="${CCACHE_DIR:-/ccache}"
-export CC="ccache ${CROSS}-gcc"
-export CXX="ccache ${CROSS}-g++"
-export AR="${CROSS}-ar"
-export STRIP="${CROSS}-strip"
-export PKG_CONFIG_PATH="$SYSROOT/usr/lib/pkgconfig"
-export PKG_CONFIG_LIBDIR="$SYSROOT/usr/lib/pkgconfig"
-export PKG_CONFIG_SYSROOT_DIR="$SYSROOT"
-# No explicit --sysroot: the buildroot compiler has it built-in
-export CFLAGS="-marm -mtune=cortex-a7 -march=armv7ve+simd -mfpu=neon-vfpv4 -mfloat-abi=hard -O2"
-export CXXFLAGS="$CFLAGS"
-export LDFLAGS="-L$SYSROOT/usr/lib"
 
-# Configure for Miyoo Mini: SDL2 backend, static build (Mini has very few system libs)
+# Configure using upstream --host=miyoomini
+# This sets SDL1.2, miyoo backend, MIYOOMINI define, correct CPU flags,
+# and enables d-pad-as-mouse input mapping automatically
 ./configure \
-    --host=arm-linux-gnueabihf \
-    --backend=sdl \
-    --enable-static \
-    --enable-optimizations \
+    --host=miyoomini \
     --enable-release \
-    --disable-debug \
-    --disable-eventrecorder \
-    --disable-mikmod \
-    --with-sdl-prefix="$SYSROOT/usr"
+    --enable-plugins --default-dynamic \
+    --disable-detection-full
 
 # Build
 make -j$(nproc)
 
-# Output
+# Output — binary + plugins + data
 mkdir -p "$OUTPUT_DIR"
+
+# Binary
 cp scummvm "$OUTPUT_DIR/"
-${CROSS}-strip "$OUTPUT_DIR/scummvm"
+arm-linux-gnueabihf-strip "$OUTPUT_DIR/scummvm"
 
-# Bundle shared libs not available on the Mini device
-LIBS_DIR="$OUTPUT_DIR/libs"
-mkdir -p "$LIBS_DIR"
+# Plugins
+mkdir -p "$OUTPUT_DIR/plugins"
+cp plugins/*.so "$OUTPUT_DIR/plugins/"
+arm-linux-gnueabihf-strip "$OUTPUT_DIR/plugins/"*.so
 
-# SDL2 is NOT bundled — device SDL2 from spruce/miyoomini/lib/ is used at runtime
-for lib in libvorbisfile.so.3 libvorbis.so.0 libogg.so.0 libmad.so.0 \
-           libasound.so.2 libjpeg.so.9 libgif.so.7 libfreetype.so.6 \
-           libfribidi.so.0 libtheoradec.so.1 libSDL2_net-2.0.so.0; do
-    found=$(find "$SYSROOT" -name "${lib}*" -type f | head -1)
-    if [ -n "$found" ]; then
-        cp "$found" "$LIBS_DIR/$lib"
-        echo "Bundled: $lib"
-    else
-        echo "WARNING: $lib not found in sysroot"
-    fi
-done
+# Themes
+mkdir -p "$OUTPUT_DIR/Theme"
+cp gui/themes/*.dat gui/themes/*.zip "$OUTPUT_DIR/Theme/"
 
-# Build joyinfo helper (prints joystick GUID and mapping info)
-cat > /tmp/joyinfo.c << 'JOYEOF'
-#include <SDL2/SDL.h>
-#include <stdio.h>
-int main() {
-    SDL_Init(SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER);
-    int n = SDL_NumJoysticks();
-    printf("Joysticks: %d\n", n);
-    for (int i = 0; i < n; i++) {
-        printf("Joy %d: %s\n", i, SDL_JoystickNameForIndex(i));
-        SDL_JoystickGUID guid = SDL_JoystickGetDeviceGUID(i);
-        char gs[64];
-        SDL_JoystickGetGUIDString(guid, gs, sizeof(gs));
-        printf("  GUID: %s\n", gs);
-        printf("  IsGameController: %d\n", SDL_IsGameController(i));
-        if (SDL_IsGameController(i))
-            printf("  GC Name: %s\n", SDL_GameControllerNameForIndex(i));
-        SDL_Joystick *j = SDL_JoystickOpen(i);
-        if (j) {
-            printf("  Axes: %d  Buttons: %d  Hats: %d\n",
-                SDL_JoystickNumAxes(j), SDL_JoystickNumButtons(j), SDL_JoystickNumHats(j));
-            printf("Listening 20s - press buttons slowly...\n");
-            fflush(stdout);
-            SDL_Event e;
-            Uint32 start = SDL_GetTicks();
-            while (SDL_GetTicks() - start < 20000) {
-                while (SDL_PollEvent(&e)) {
-                    if (e.type == SDL_JOYBUTTONDOWN) {
-                        printf("  BUTTON %d DOWN\n", e.jbutton.button);
-                        fflush(stdout);
-                    } else if (e.type == SDL_JOYAXISMOTION && (e.jaxis.value > 8000 || e.jaxis.value < -8000)) {
-                        printf("  AXIS %d value %d\n", e.jaxis.axis, e.jaxis.value);
-                        fflush(stdout);
-                    } else if (e.type == SDL_JOYHATMOTION && e.jhat.value != 0) {
-                        printf("  HAT %d value %d\n", e.jhat.hat, e.jhat.value);
-                        fflush(stdout);
-                    }
-                }
-                SDL_Delay(10);
-            }
-            SDL_JoystickClose(j);
-        }
-    }
-    printf("Done\n");
-    SDL_Quit();
-    return 0;
-}
-JOYEOF
-${CROSS}-gcc -o "$OUTPUT_DIR/joyinfo" /tmp/joyinfo.c \
-    -I"$SYSROOT/usr/include/SDL2" -L"$SYSROOT/usr/lib" -lSDL2 -static-libgcc
-${CROSS}-strip "$OUTPUT_DIR/joyinfo"
-echo "Built joyinfo helper"
+# Extra data
+mkdir -p "$OUTPUT_DIR/Extra"
+cp -r dists/engine-data/* "$OUTPUT_DIR/Extra/"
+rm -rf "$OUTPUT_DIR/Extra/patches" "$OUTPUT_DIR/Extra/testbed-audiocd-files"
+rm -f "$OUTPUT_DIR/Extra/README" "$OUTPUT_DIR/Extra/"*.mk "$OUTPUT_DIR/Extra/"*.sh
 
-echo "=== Build complete: ${OUTPUT_DIR}/scummvm ==="
+# Virtual keyboard
+cp backends/vkeybd/packs/vkeybd_default.zip "$OUTPUT_DIR/Extra/"
+cp backends/vkeybd/packs/vkeybd_small.zip "$OUTPUT_DIR/Extra/"
+
+# Soundfont
+cp dists/soundfonts/Roland_SC-55.sf2 "$OUTPUT_DIR/Extra/" 2>/dev/null || true
+
+echo "=== Build complete ==="
