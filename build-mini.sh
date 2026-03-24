@@ -90,4 +90,37 @@ for lib in libvorbisfile.so.3 libvorbis.so.0 libogg.so.0 libmad.so.0 \
     fi
 done
 
+# Build joyinfo helper (prints joystick GUID and mapping info)
+cat > /tmp/joyinfo.c << 'JOYEOF'
+#include <SDL2/SDL.h>
+#include <stdio.h>
+int main() {
+    SDL_Init(SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER);
+    int n = SDL_NumJoysticks();
+    printf("Joysticks: %d\n", n);
+    for (int i = 0; i < n; i++) {
+        printf("Joy %d: %s\n", i, SDL_JoystickNameForIndex(i));
+        SDL_JoystickGUID guid = SDL_JoystickGetDeviceGUID(i);
+        char gs[64];
+        SDL_JoystickGetGUIDString(guid, gs, sizeof(gs));
+        printf("  GUID: %s\n", gs);
+        printf("  IsGameController: %d\n", SDL_IsGameController(i));
+        if (SDL_IsGameController(i))
+            printf("  GC Name: %s\n", SDL_GameControllerNameForIndex(i));
+        SDL_Joystick *j = SDL_JoystickOpen(i);
+        if (j) {
+            printf("  Axes: %d  Buttons: %d  Hats: %d\n",
+                SDL_JoystickNumAxes(j), SDL_JoystickNumButtons(j), SDL_JoystickNumHats(j));
+            SDL_JoystickClose(j);
+        }
+    }
+    SDL_Quit();
+    return 0;
+}
+JOYEOF
+${CROSS}-gcc -o "$OUTPUT_DIR/joyinfo" /tmp/joyinfo.c \
+    -I"$SYSROOT/usr/include/SDL2" -L"$SYSROOT/usr/lib" -lSDL2 -static-libgcc
+${CROSS}-strip "$OUTPUT_DIR/joyinfo"
+echo "Built joyinfo helper"
+
 echo "=== Build complete: ${OUTPUT_DIR}/scummvm ==="

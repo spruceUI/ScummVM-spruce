@@ -86,6 +86,7 @@ jobs:
         run: |
           mv output/scummvm output/scummvm.mini
           gh release upload "latest" output/scummvm.mini --clobber
+          gh release upload "latest" output/joyinfo --clobber
           cd output/libs
           tar czf ../scummvm-mini-libs.tar.gz *.so*
           gh release upload "latest" ../scummvm-mini-libs.tar.gz --clobber
