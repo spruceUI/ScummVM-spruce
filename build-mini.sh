@@ -111,9 +111,29 @@ int main() {
         if (j) {
             printf("  Axes: %d  Buttons: %d  Hats: %d\n",
                 SDL_JoystickNumAxes(j), SDL_JoystickNumButtons(j), SDL_JoystickNumHats(j));
+            printf("Listening 20s - press buttons slowly...\n");
+            fflush(stdout);
+            SDL_Event e;
+            Uint32 start = SDL_GetTicks();
+            while (SDL_GetTicks() - start < 20000) {
+                while (SDL_PollEvent(&e)) {
+                    if (e.type == SDL_JOYBUTTONDOWN) {
+                        printf("  BUTTON %d DOWN\n", e.jbutton.button);
+                        fflush(stdout);
+                    } else if (e.type == SDL_JOYAXISMOTION && (e.jaxis.value > 8000 || e.jaxis.value < -8000)) {
+                        printf("  AXIS %d value %d\n", e.jaxis.axis, e.jaxis.value);
+                        fflush(stdout);
+                    } else if (e.type == SDL_JOYHATMOTION && e.jhat.value != 0) {
+                        printf("  HAT %d value %d\n", e.jhat.hat, e.jhat.value);
+                        fflush(stdout);
+                    }
+                }
+                SDL_Delay(10);
+            }
             SDL_JoystickClose(j);
         }
     }
+    printf("Done\n");
     SDL_Quit();
     return 0;
 }
