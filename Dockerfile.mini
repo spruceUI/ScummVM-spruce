@@ -88,6 +88,22 @@ RUN cd /tmp && \
 # TODO: libmpeg2 — sourceforge/debian mirrors unreliable, only needed for 2 engines
 # (Alcachofa, QD Engine). Add later when we find a reliable source.
 
+# Build SDL 1.2.15 from source with 32bpp fbcon rotation support
+# The toolchain's prebuilt SDL1.2 only supports 16bpp rotation shadows.
+# We patch the fbcon driver to add 32bpp blit functions so
+# SDL_VIDEO_FBCON_ROTATION=UD works at 32-bit color depth.
+COPY patches/mini/sdl12-fbcon-32bpp-rotation.py /tmp/
+RUN cd /tmp && \
+    wget -q https://www.libsdl.org/release/SDL-1.2.15.tar.gz && \
+    tar xzf SDL-1.2.15.tar.gz && cd SDL-1.2.15 && \
+    python3 /tmp/sdl12-fbcon-32bpp-rotation.py && \
+    ./configure --host=arm-linux-gnueabihf --prefix=$SYSROOT/usr \
+        --enable-video-fbcon --disable-video-x11 --disable-video-directfb \
+        --disable-arts --disable-esd --disable-pulseaudio \
+        --disable-video-opengl && \
+    make -j$(nproc) && make install && \
+    rm -rf /tmp/SDL-1.2.15*
+
 COPY build-mini.sh /build-mini.sh
 RUN chmod +x /build-mini.sh
 COPY patches/ /patches/
