@@ -92,7 +92,7 @@ RUN cd /tmp && \
 # The toolchain's prebuilt SDL1.2 only supports 16bpp rotation shadows.
 # We patch the fbcon driver to add 32bpp blit functions so
 # SDL_VIDEO_FBCON_ROTATION=UD works at 32-bit color depth.
-COPY patches/mini/sdl12-fbcon-32bpp-rotation.py /tmp/
+COPY sdl12-fbcon-32bpp-rotation.py /tmp/
 RUN cd /tmp && \
     wget -q https://www.libsdl.org/release/SDL-1.2.15.tar.gz && \
     tar xzf SDL-1.2.15.tar.gz && cd SDL-1.2.15 && \
