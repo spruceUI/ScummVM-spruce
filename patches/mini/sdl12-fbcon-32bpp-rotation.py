@@ -54,7 +54,12 @@ print('Patch 2: Added 32bpp blitFunc assignment')
 # 3. Add FB_blit32 functions after FB_blit16blocked
 OLD_BLIT = '''static void FB_DirectUpdate(_THIS, int numrects, SDL_Rect *rects)'''
 
-NEW_BLIT = '''static void FB_blit32(Uint8 *byte_src_pos, int src_right_delta, int src_down_delta,
+NEW_BLIT = '''#ifndef BLOCKSIZE_W
+#define BLOCKSIZE_W 32
+#define BLOCKSIZE_H 32
+#endif
+
+static void FB_blit32(Uint8 *byte_src_pos, int src_right_delta, int src_down_delta,
 		Uint8 *byte_dst_pos, int dst_linebytes, int width, int height)
 {
 	int w;
