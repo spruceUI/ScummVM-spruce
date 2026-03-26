@@ -89,3 +89,4 @@ jobs:
           gh release upload "latest" output/libtheoradec.so.1* --clobber
           gh release upload "latest" output/libSDL2_net-2.0.so.0* --clobber
           gh release upload "latest" output/fixjoy --clobber
+          gh release upload "latest" output/libfluidlite.so* --clobber
