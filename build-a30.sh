@@ -180,6 +180,7 @@ rm -f "$SYSROOT/usr/lib/libfontconfig"* "$SYSROOT/usr/lib/pkgconfig/fontconfig.p
     --enable-release \
     --disable-debug \
     --disable-eventrecorder \
+    --enable-fluidlite \
     --with-sdl-prefix="$SYSROOT/usr"
 
 # Build
@@ -193,6 +194,7 @@ ${CROSS}-strip "$OUTPUT_DIR/scummvm"
 # Bundle libs not on device
 cp "$SYSROOT/usr/lib/libtheoradec.so.1"* "$OUTPUT_DIR/"
 cp "$SYSROOT/usr/lib/libSDL2_net-2.0.so.0"* "$OUTPUT_DIR/"
+cp "$SYSROOT/usr/lib/libfluidlite.so"* "$OUTPUT_DIR/"
 
 # Build fixjoy helper: reads and fixes evdev axis calibration
 cat > /tmp/fixjoy.c << 'FIXJOY'

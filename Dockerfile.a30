@@ -12,6 +12,7 @@ RUN apt-get update && \
     python3 \
     wget \
     ccache \
+    cmake \
     autoconf \
     automake \
     libtool \
@@ -150,6 +151,23 @@ RUN export CC="${TARGET}-gcc" && \
     make -j$(nproc) && \
     make install && \
     rm -rf /tmp/SDL2_net-2.2.0*
+
+# Cross-compile FluidLite (lightweight FluidSynth alternative, zero deps)
+RUN export CC="${TARGET}-gcc" && \
+    export CXX="${TARGET}-g++" && \
+    export CFLAGS="--sysroot=$SYSROOT -march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard -O2" && \
+    cd /tmp && \
+    git clone --depth 1 https://github.com/divideconcept/FluidLite.git && \
+    cd FluidLite && mkdir build && cd build && \
+    cmake -DCMAKE_SYSTEM_NAME=Linux \
+        -DCMAKE_SYSTEM_PROCESSOR=arm \
+        -DCMAKE_C_COMPILER=${TARGET}-gcc \
+        -DCMAKE_C_FLAGS="--sysroot=$SYSROOT -march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard -O2" \
+        -DCMAKE_INSTALL_PREFIX=$SYSROOT/usr \
+        -DBUILD_SHARED_LIBS=ON \
+        .. && \
+    make -j$(nproc) && make install && \
+    rm -rf /tmp/FluidLite
 
 # Create library symlinks that ScummVM's configure expects
 RUN cd "$SYSROOT/usr/lib" && \
