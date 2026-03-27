@@ -55,6 +55,7 @@ export CCACHE_DIR="${CCACHE_DIR:-/ccache}"
     --disable-debug \
     --disable-eventrecorder \
     --enable-vkeybd \
+    --enable-openmpt \
     --enable-fluidsynth | tee configure_summary.txt
 
 # Build
@@ -96,7 +97,7 @@ LIBS=(
   "libp11-kit.so.0" "libpng16.so.16" "libpsl.so.5" "libroken.so.18"
   "librtmp.so.1" "libsasl2.so.2" "libsndio.so.7.0" "libspeechd.so.2"
   "libsqlite3.so.0" "libssh.so.4" "libssl.so.1.1" "libtasn1.so.6"
-  "libunistring.so.2" "libwind.so.0" "libz.so.1" "libvpx.so.6"
+  "libunistring.so.2" "libwind.so.0" "libz.so.1" "libvpx.so.6" libopenmpt.so.0
 )
 
 for lib in "${LIBS[@]}"; do
