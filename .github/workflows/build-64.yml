@@ -6,6 +6,11 @@ on:
       scummvm_version:
         description: 'ScummVM version tag'
         default: 'v2026.1.0'
+      debug_enabled:
+        description: 'Enable step debug logging'
+        required: false
+        type: boolean
+        default: false
   workflow_call:
     inputs:
       scummvm_version:
@@ -17,7 +22,7 @@ permissions:
   packages: write
 
 env:
-  IMAGE: ghcr.io/spruceui/scummvm-builder-64
+  IMAGE: ghcr.io/${{ github.repository_owner }}/scummvm-builder-64
 
 jobs:
   build:
@@ -79,5 +84,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          mv output/scummvm output/scummvm.64
-          gh release upload "latest" output/scummvm.64 --clobber
+          if [ -f output/scummvm.64.7z ]; then
+            gh release upload "latest" output/scummvm.64.7z --clobber
+          else
+            echo "Error: output/scummvm.64.7z not found."
+            exit 1
+          fi
