@@ -43,7 +43,7 @@ export PKG_CONFIG_PATH="/usr/lib/aarch64-linux-gnu/pkgconfig"
 export PKG_CONFIG_LIBDIR="/usr/lib/aarch64-linux-gnu/pkgconfig"
 export CCACHE_DIR="${CCACHE_DIR:-/ccache}"
 
-export CFLAGS="-O3 -flto=auto"
+export CFLAGS="-O3 -ffunction-sections -fdata-sections -flto=auto"
 export CXXFLAGS="$CFLAGS"
 export LDFLAGS="-flto=auto"
 

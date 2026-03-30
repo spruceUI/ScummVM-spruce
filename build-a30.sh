@@ -164,7 +164,7 @@ export STRIP="${CROSS}-strip"
 export PKG_CONFIG_PATH="$SYSROOT/usr/lib/pkgconfig"
 export PKG_CONFIG_LIBDIR="$SYSROOT/usr/lib/pkgconfig"
 export PKG_CONFIG_SYSROOT_DIR="$SYSROOT"
-export CFLAGS="--sysroot=$SYSROOT -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard -O3 -flto=auto"
+export CFLAGS="--sysroot=$SYSROOT -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard -O3 -ffunction-sections -fdata-sections -flto=auto"
 export CXXFLAGS="$CFLAGS"
 export LDFLAGS="-Wl,--gc-sections --sysroot=$SYSROOT -L$SYSROOT/usr/lib -static-libstdc++ -flto=auto"
 
