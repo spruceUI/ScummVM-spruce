@@ -164,9 +164,9 @@ export STRIP="${CROSS}-strip"
 export PKG_CONFIG_PATH="$SYSROOT/usr/lib/pkgconfig"
 export PKG_CONFIG_LIBDIR="$SYSROOT/usr/lib/pkgconfig"
 export PKG_CONFIG_SYSROOT_DIR="$SYSROOT"
-export CFLAGS="--sysroot=$SYSROOT -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard -ffunction-sections -fdata-sections -O3 -flto"
+export CFLAGS="--sysroot=$SYSROOT -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard -O3"
 export CXXFLAGS="$CFLAGS"
-export LDFLAGS="-Wl,--gc-sections --sysroot=$SYSROOT -L$SYSROOT/usr/lib -static-libstdc++ -flto"
+export LDFLAGS="--sysroot=$SYSROOT -L$SYSROOT/usr/lib -static-libstdc++"
 export ENDIANNESS=little
 
 # Remove fontconfig from sysroot so configure won't auto-detect it
@@ -183,6 +183,10 @@ rm -f "$SYSROOT/usr/lib/libfontconfig"* "$SYSROOT/usr/lib/pkgconfig/fontconfig.p
     --disable-eventrecorder \
     --enable-fluidlite \
     --with-sdl-prefix="$SYSROOT/usr"
+
+echo "CFLAGS += $CFLAGS -ffunction-sections -fdata-sections -flto" >> config.mk
+echo "CXXFLAGS += $CXXFLAGS -ffunction-sections -fdata-sections -flto" >> config.mk
+echo "LDFLAGS += $LDFLAGS -Wl,--gc-sections -flto" >> config.mk
 
 # Build
 make -j$(nproc)
