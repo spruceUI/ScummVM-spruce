@@ -49,9 +49,6 @@ export CXXFLAGS="$CXXFLAGS -O3 -ffunction-sections -fdata-sections -flto"
 export LDFLAGS="$LDFLAGS -Wl,--gc-sections -flto"
 
 # Configure for universal 64-bit: SDL2 + OpenGL ES2, all engines
-CFLAGS="$CFLAGS" \
-CXXFLAGS="$CXXFLAGS" \
-LDFLAGS="$LDFLAGS" \
 ./configure \
     --host=aarch64-linux-gnu \
     --backend=sdl \
