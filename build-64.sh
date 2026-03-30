@@ -47,8 +47,11 @@ export CFLAGS="-O3 -flto=auto"
 export CXXFLAGS="$CFLAGS"
 export LDFLAGS="-flto=auto"
 
+echo "ac_cv_c_bigendian=no" > config.cache
+
 # Configure without optimization flags so probe tests work correctly
 ./configure \
+    --cache-file=config.cache \
     --host=aarch64-linux-gnu \
     --backend=sdl \
     --opengl-mode=gles2 \

@@ -166,8 +166,9 @@ export PKG_CONFIG_LIBDIR="$SYSROOT/usr/lib/pkgconfig"
 export PKG_CONFIG_SYSROOT_DIR="$SYSROOT"
 export CFLAGS="--sysroot=$SYSROOT -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard -O3 -flto=auto"
 export CXXFLAGS="$CFLAGS"
-export LDFLAGS="--sysroot=$SYSROOT -L$SYSROOT/usr/lib -static-libstdc++ -flto=auto"
-export ENDIANNESS=little
+export LDFLAGS="-Wl,--gc-sections --sysroot=$SYSROOT -L$SYSROOT/usr/lib -static-libstdc++ -flto=auto"
+
+echo "ac_cv_c_bigendian=no" > config.cache
 
 # Remove fontconfig from sysroot so configure won't auto-detect it
 # (not present on the A30 device, and drags in libexpat/libpng16)
@@ -175,6 +176,7 @@ rm -f "$SYSROOT/usr/lib/libfontconfig"* "$SYSROOT/usr/lib/pkgconfig/fontconfig.p
 
 # Configure for A30: SDL2 backend
 ./configure \
+    --cache-file=config.cache \
     --host=arm-linux-gnueabihf \
     --backend=sdl \
     --enable-optimizations \
