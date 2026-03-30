@@ -45,7 +45,7 @@ export CCACHE_DIR="${CCACHE_DIR:-/ccache}"
 
 export CFLAGS="-O3 -flto=auto"
 export CXXFLAGS="$CFLAGS"
-export LDFLAGS="-Wl,--gc-sections -flto=auto"
+export LDFLAGS="-flto=auto"
 
 # Configure without optimization flags so probe tests work correctly
 ./configure \
