@@ -25,16 +25,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Ensure latest release exists
+      - name: Ensure beta release exists
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TAG="latest"
+          TAG="beta-${{ github.ref_name }}"
           gh release view "$TAG" >/dev/null 2>&1 || \
             gh release create "$TAG" \
               --target "${{ github.ref_name }}" \
-              --title "Latest Build" \
-              --notes "ScummVM ${{ github.event.inputs.scummvm_version || 'v2026.1.0' }} binaries for spruce" \
+              --title "Beta Build (${{ github.ref_name }})" \
+              --prerelease \
+              --notes "ScummVM binaries built from ${{ github.ref_name }}" \
             || true
 
       - name: Set up Docker Buildx
@@ -80,10 +81,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mv output/scummvm output/scummvm.mini
-          gh release upload "latest" output/scummvm.mini --clobber
+          gh release upload "beta-${{ github.ref_name }}" output/scummvm.mini --clobber
           cd output
           tar czf scummvm-mini-data.tar.gz plugins/ Theme/ Extra/
-          gh release upload "latest" scummvm-mini-data.tar.gz --clobber
+          gh release upload "beta-${{ github.ref_name }}" scummvm-mini-data.tar.gz --clobber
           cd libs
           tar czf ../scummvm-mini-libs.tar.gz *.so*
-          gh release upload "latest" ../scummvm-mini-libs.tar.gz --clobber
+          gh release upload "beta-${{ github.ref_name }}" ../scummvm-mini-libs.tar.gz --clobber
