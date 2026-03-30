@@ -90,3 +90,4 @@ jobs:
           gh release upload "latest" output/libSDL2_net-2.0.so.0* --clobber
           gh release upload "latest" output/fixjoy --clobber
           gh release upload "latest" output/libfluidlite.so* --clobber
+          gh release upload "latest" output/libasound.so.2* --clobber

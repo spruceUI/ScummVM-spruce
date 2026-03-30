@@ -191,10 +191,11 @@ mkdir -p "$OUTPUT_DIR"
 cp scummvm "$OUTPUT_DIR/"
 ${CROSS}-strip "$OUTPUT_DIR/scummvm"
 
-# Bundle libs not on device
+# Bundle libs not on device (or where device version lacks symbol versioning)
 cp "$SYSROOT/usr/lib/libtheoradec.so.1"* "$OUTPUT_DIR/"
 cp "$SYSROOT/usr/lib/libSDL2_net-2.0.so.0"* "$OUTPUT_DIR/"
 cp "$SYSROOT/usr/lib/libfluidlite.so"* "$OUTPUT_DIR/"
+cp "$SYSROOT/usr/lib/libasound.so.2"* "$OUTPUT_DIR/"
 
 # Build fixjoy helper: reads and fixes evdev axis calibration
 cat > /tmp/fixjoy.c << 'FIXJOY'
