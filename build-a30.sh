@@ -164,9 +164,9 @@ export STRIP="${CROSS}-strip"
 export PKG_CONFIG_PATH="$SYSROOT/usr/lib/pkgconfig"
 export PKG_CONFIG_LIBDIR="$SYSROOT/usr/lib/pkgconfig"
 export PKG_CONFIG_SYSROOT_DIR="$SYSROOT"
-export CFLAGS="--sysroot=$SYSROOT -march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard -O2"
+export CFLAGS="--sysroot=$SYSROOT -mcpu=cortex-a7 -ffunction-sections -fdata-sections -fomit-frame-pointer -mfpu=neon-vfpv4 -mfloat-abi=hard -O3 -flto"
 export CXXFLAGS="$CFLAGS"
-export LDFLAGS="--sysroot=$SYSROOT -L$SYSROOT/usr/lib -static-libstdc++"
+export LDFLAGS="-Wl,--gc-sections,--as-needed --sysroot=$SYSROOT -L$SYSROOT/usr/lib -static-libstdc++ -flto"
 
 # Remove fontconfig from sysroot so configure won't auto-detect it
 # (not present on the A30 device, and drags in libexpat/libpng16)
@@ -189,7 +189,7 @@ make -j$(nproc)
 # Output
 mkdir -p "$OUTPUT_DIR"
 cp scummvm "$OUTPUT_DIR/"
-${CROSS}-strip "$OUTPUT_DIR/scummvm"
+${CROSS}-strip -s "$OUTPUT_DIR/scummvm"
 
 # Bundle libs not on device (or where device version lacks symbol versioning)
 cp "$SYSROOT/usr/lib/libtheoradec.so.1"* "$OUTPUT_DIR/"

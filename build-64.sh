@@ -43,7 +43,14 @@ export PKG_CONFIG_PATH="/usr/lib/aarch64-linux-gnu/pkgconfig"
 export PKG_CONFIG_LIBDIR="/usr/lib/aarch64-linux-gnu/pkgconfig"
 export CCACHE_DIR="${CCACHE_DIR:-/ccache}"
 
+export CFLAGS="$CFLAGS -O3 -ffunction-sections -fdata-sections -flto"
+export CXXFLAGS="$CXXFLAGS -O3 -ffunction-sections -fdata-sections -flto"
+export LDFLAGS="$LDFLAGS -Wl,--gc-sections,--as-needed -flto"
+
 # Configure for universal 64-bit: SDL2 + OpenGL ES2, all engines
+CFLAGS="$CFLAGS" \
+CXXFLAGS="$CXXFLAGS" \
+LDFLAGS="$LDFLAGS" \
 ./configure \
     --host=aarch64-linux-gnu \
     --backend=sdl \
@@ -62,6 +69,6 @@ make -j$(nproc)
 # Output
 mkdir -p "$OUTPUT_DIR"
 cp scummvm "$OUTPUT_DIR/"
-aarch64-linux-gnu-strip "$OUTPUT_DIR/scummvm"
+aarch64-linux-gnu-strip -s "$OUTPUT_DIR/scummvm"
 
 echo "=== Build complete: ${OUTPUT_DIR}/scummvm ==="

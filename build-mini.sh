@@ -59,12 +59,12 @@ mkdir -p "$OUTPUT_DIR"
 
 # Binary
 cp scummvm "$OUTPUT_DIR/"
-arm-linux-gnueabihf-strip "$OUTPUT_DIR/scummvm"
+arm-linux-gnueabihf-strip -s "$OUTPUT_DIR/scummvm"
 
 # Plugins
 mkdir -p "$OUTPUT_DIR/plugins"
 cp plugins/*.so "$OUTPUT_DIR/plugins/"
-arm-linux-gnueabihf-strip "$OUTPUT_DIR/plugins/"*.so
+arm-linux-gnueabihf-strip -s "$OUTPUT_DIR/plugins/"*.so
 
 # Themes
 mkdir -p "$OUTPUT_DIR/Theme"
