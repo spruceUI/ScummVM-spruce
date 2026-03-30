@@ -43,6 +43,10 @@ export PKG_CONFIG_PATH="/usr/lib/aarch64-linux-gnu/pkgconfig"
 export PKG_CONFIG_LIBDIR="/usr/lib/aarch64-linux-gnu/pkgconfig"
 export CCACHE_DIR="${CCACHE_DIR:-/ccache}"
 
+export CFLAGS="-O3 -flto=auto"
+export CXXFLAGS="$CFLAGS"
+export LDFLAGS="-Wl,--gc-sections -flto=auto"
+
 # Configure without optimization flags so probe tests work correctly
 ./configure \
     --host=aarch64-linux-gnu \
@@ -55,11 +59,6 @@ export CCACHE_DIR="${CCACHE_DIR:-/ccache}"
     --disable-eventrecorder \
     --enable-vkeybd \
     --enable-fluidsynth
-
-# Append production flags after configure has written config.mak
-echo 'CFLAGS += -O3 -ffunction-sections -fdata-sections -flto' >> config.mk
-echo 'CXXFLAGS += -O3 -ffunction-sections -fdata-sections -flto' >> config.mk
-echo 'LDFLAGS += -Wl,--gc-sections -flto' >> config.mk
 
 # Build
 make -j$(nproc)
