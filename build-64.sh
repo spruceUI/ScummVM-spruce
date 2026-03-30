@@ -42,13 +42,8 @@ export STRIP="aarch64-linux-gnu-strip"
 export PKG_CONFIG_PATH="/usr/lib/aarch64-linux-gnu/pkgconfig"
 export PKG_CONFIG_LIBDIR="/usr/lib/aarch64-linux-gnu/pkgconfig"
 export CCACHE_DIR="${CCACHE_DIR:-/ccache}"
-export ENDIANNESS=little
 
-export CFLAGS="$CFLAGS -O3 -ffunction-sections -fdata-sections -flto"
-export CXXFLAGS="$CXXFLAGS -O3 -ffunction-sections -fdata-sections -flto"
-export LDFLAGS="$LDFLAGS -Wl,--gc-sections -flto"
-
-# Configure for universal 64-bit: SDL2 + OpenGL ES2, all engines
+# Configure without optimization flags so probe tests work correctly
 ./configure \
     --host=aarch64-linux-gnu \
     --backend=sdl \
@@ -60,6 +55,11 @@ export LDFLAGS="$LDFLAGS -Wl,--gc-sections -flto"
     --disable-eventrecorder \
     --enable-vkeybd \
     --enable-fluidsynth
+
+# Append production flags after configure has written config.mak
+echo 'CFLAGS += -O3 -ffunction-sections -fdata-sections -flto' >> config.mk
+echo 'CXXFLAGS += -O3 -ffunction-sections -fdata-sections -flto' >> config.mk
+echo 'LDFLAGS += -Wl,--gc-sections -flto' >> config.mk
 
 # Build
 make -j$(nproc)
