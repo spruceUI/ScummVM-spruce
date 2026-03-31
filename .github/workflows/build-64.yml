@@ -23,7 +23,7 @@ permissions:
 
 env:
   # This avoids overwriting the original 'latest' image and ensures isolation.
-  IMAGE: ghcr.io/spruceUI/scummvm-builder-64:v2
+  IMAGE: ghcr.io/spruceui/scummvm-builder-64:v2
 
 jobs:
   build:
