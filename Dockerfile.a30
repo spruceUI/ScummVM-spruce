@@ -22,6 +22,7 @@ RUN apt-get update && \
     bzip2 \
     file \
     sed \
+    p7zip-full \
     && rm -rf /var/lib/apt/lists/*
 
 # Install A30 buildroot toolchain
