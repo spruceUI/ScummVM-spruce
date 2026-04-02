@@ -99,9 +99,6 @@ RUN cd /tmp && \
     make -j$(nproc) && make install && \
     rm -rf /tmp/FluidLite
 
-# TODO: libmpeg2 — sourceforge/debian mirrors unreliable, only needed for 2 engines
-# (Alcachofa, QD Engine). Add later when we find a reliable source.
-
 COPY build-mini.sh /build-mini.sh
 RUN chmod +x /build-mini.sh
 COPY patches/ /patches/
