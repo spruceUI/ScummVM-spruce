@@ -1,8 +1,13 @@
 #!/bin/bash
 set -e
 
-SCUMMVM_VERSION="${SCUMMVM_VERSION:-v2026.1.0}"
+SCUMMVM_VERSION="${SCUMMVM_VERSION:-v2026.2.0}"
 OUTPUT_DIR="${OUTPUT_DIR:-/output}"
+
+# UPLOAD STRUCTURE
+EMU_DIR="$OUTPUT_DIR/Emu/SCUMMVM"
+LIB_DIR="$OUTPUT_DIR/Emu/SCUMMVM/liba30"
+LOGS_DIR="$OUTPUT_DIR/logs"
 
 echo "=== Building ScummVM ${SCUMMVM_VERSION} for A30 (armhf) ==="
 
@@ -14,8 +19,11 @@ fi
 
 cd scummvm
 
+# Patch Directory
+PATCH_DIRS="/patches/common /patches/a30"
+
 # Apply patches
-for dir in /patches/common /patches/a30; do
+for dir in $PATCH_DIRS; do
     if [ -d "$dir" ] && ls "$dir"/*.patch 1>/dev/null 2>&1; then
         for patch in "$dir"/*.patch; do
             echo "Applying: $(basename "$patch")"
@@ -142,13 +150,15 @@ with open('backends/graphics/sdl/sdl-graphics.cpp', 'w') as f:
 PYEOF
 echo "Patched sdl-graphics for mouse X scaling on rotated display"
 
-# Apply common Python patches
-if [ -d /patches/common ] && ls /patches/common/*.py 1>/dev/null 2>&1; then
-    for patch in /patches/common/*.py; do
-        echo "Applying: $(basename "$patch")"
-        python3 "$patch"
-    done
-fi
+# Apply Python patches
+for dir in $PATCH_DIRS; do
+    if [ -d "$dir" ] && ls "$dir"/*.py 1>/dev/null 2>&1; then
+        for patch in "$dir"/*.py; do
+            echo "Applying: $(basename "$patch")"
+            python3 "$patch"
+        done
+    fi
+done
 
 # A30 buildroot toolchain
 TOOLCHAIN=/opt/a30
@@ -183,21 +193,44 @@ rm -f "$SYSROOT/usr/lib/libfontconfig"* "$SYSROOT/usr/lib/pkgconfig/fontconfig.p
     --disable-debug \
     --disable-eventrecorder \
     --enable-fluidlite \
-    --with-sdl-prefix="$SYSROOT/usr"
+    --with-sdl-prefix="$SYSROOT/usr" | tee configure_summary.txt
 
 # Build
 make -j$(nproc)
 
-# Output
-mkdir -p "$OUTPUT_DIR"
-cp scummvm "$OUTPUT_DIR/"
-${CROSS}-strip "$OUTPUT_DIR/scummvm"
+# OUTPUT STRUCTURE
+mkdir -p "$EMU_DIR/LICENSES" "$EMU_DIR/Theme" "$EMU_DIR/Extra"
+mkdir -p "$LIB_DIR"
+mkdir -p "$LOGS_DIR"
+
+# Binary and Strip
+cp scummvm "$EMU_DIR/scummvm.a30"
+${CROSS}-strip "$EMU_DIR/scummvm.a30"
+
+# Assets
+cp -f LICENSES/* "$EMU_DIR/LICENSES/"
+[ -f dists/soundfonts/COPYRIGHT.Roland_SC-55 ] && cp -f dists/soundfonts/COPYRIGHT.Roland_SC-55 "$EMU_DIR/LICENSES/"
+cp -f gui/themes/*.dat gui/themes/*.zip "$EMU_DIR/Theme/"
+cp -f dists/networking/wwwroot.zip "$EMU_DIR/Theme/"
+cp -f -r dists/engine-data/* "$EMU_DIR/Extra/"
+rm -rf "$EMU_DIR/Extra/patches"
+rm -rf "$EMU_DIR/Extra/testbed-audiocd-files"
+rm -f "$EMU_DIR/Extra/README"
+rm -f "$EMU_DIR/Extra/"*.mk
+rm -f "$EMU_DIR/Extra/"*.sh
+cp -f backends/vkeybd/packs/vkeybd_default.zip "$EMU_DIR/Extra/"
+cp -f backends/vkeybd/packs/vkeybd_small.zip "$EMU_DIR/Extra/"
+[ -f dists/soundfonts/Roland_SC-55.sf2 ] && cp -f dists/soundfonts/Roland_SC-55.sf2 "$EMU_DIR/Extra/"
+
+mkdir -p "$EMU_DIR/Extra/shaders"
+find engines/ -type f \( -name "*.fragment" -o -name "*.vertex" \) -exec cp -f {} "$EMU_DIR/Extra/shaders/" \;
 
 # Bundle libs not on device (or where device version lacks symbol versioning)
-cp "$SYSROOT/usr/lib/libtheoradec.so.1"* "$OUTPUT_DIR/"
-cp "$SYSROOT/usr/lib/libSDL2_net-2.0.so.0"* "$OUTPUT_DIR/"
-cp "$SYSROOT/usr/lib/libfluidlite.so"* "$OUTPUT_DIR/"
-cp "$SYSROOT/usr/lib/libasound.so.2"* "$OUTPUT_DIR/"
+cp -L "$SYSROOT/usr/lib/libtheoradec.so.1"* "$LIB_DIR/"
+cp -L "$SYSROOT/usr/lib/libSDL2_net-2.0.so.0"* "$LIB_DIR/"
+cp -L "$SYSROOT/usr/lib/libfluidlite.so"* "$LIB_DIR/"
+cp -L "$SYSROOT/usr/lib/libasound.so.2"* "$LIB_DIR/"
+cp -L "$SYSROOT/usr/lib/libmad.so.0"* "$LIB_DIR/"
 
 # Build fixjoy helper: reads and fixes evdev axis calibration
 cat > /tmp/fixjoy.c << 'FIXJOY'
@@ -235,8 +268,17 @@ int main(int argc, char **argv) {
     return 0;
 }
 FIXJOY
-${CROSS}-gcc -static -o "$OUTPUT_DIR/fixjoy" /tmp/fixjoy.c
-${CROSS}-strip "$OUTPUT_DIR/fixjoy"
+${CROSS}-gcc -static -o "$EMU_DIR/fixjoy" /tmp/fixjoy.c
+${CROSS}-strip "$EMU_DIR/fixjoy"
 echo "Built fixjoy helper"
 
-echo "=== Build complete: ${OUTPUT_DIR}/scummvm ==="
+# Logs Collection
+cp -f configure_summary.txt config.log config.h config.mk "$LOGS_DIR/"
+
+cd "$OUTPUT_DIR"
+# Archive
+BUILD_DATE=$(date +%m%d)
+OUT_FILENAME="scummvm.a30.${BUILD_DATE}.7z"
+7z a -t7z -m0=lzma2 -mx=9 "$OUT_FILENAME" Emu/ logs/
+
+echo "=== Build complete: ${OUTPUT_DIR}/${OUT_FILENAME} ==="

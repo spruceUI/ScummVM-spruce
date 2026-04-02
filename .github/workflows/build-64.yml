@@ -5,19 +5,25 @@ on:
     inputs:
       scummvm_version:
         description: 'ScummVM version tag'
-        default: 'v2026.1.0'
+        default: 'v2026.2.0'
+      debug_enabled:
+        description: 'Enable step debug logging'
+        required: false
+        type: boolean
+        default: false
   workflow_call:
     inputs:
       scummvm_version:
         type: string
-        default: 'v2026.1.0'
+        default: 'v2026.2.0'
 
 permissions:
   contents: write
   packages: write
 
 env:
-  IMAGE: ghcr.io/spruceui/scummvm-builder-64
+  # This avoids overwriting the original 'latest' image and ensures isolation.
+  IMAGE: ghcr.io/spruceui/scummvm-builder-64:v2
 
 jobs:
   build:
@@ -25,17 +31,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Ensure beta release exists
+      - name: Ensure release exists
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="beta-${{ github.ref_name }}"
+          echo "Target Release Tag: $TAG"
+          
           gh release view "$TAG" >/dev/null 2>&1 || \
             gh release create "$TAG" \
               --target "${{ github.ref_name }}" \
               --title "Beta Build (${{ github.ref_name }})" \
               --prerelease \
-              --notes "ScummVM binaries built from ${{ github.ref_name }}" \
+              --notes "ScummVM binaries built from ${{ github.ref_name }} (v2026.2.0)" \
             || true
 
       - name: Set up Docker Buildx
@@ -54,31 +62,41 @@ jobs:
           context: .
           file: Dockerfile.64
           push: true
-          tags: ${{ env.IMAGE }}:latest
-          cache-from: type=registry,ref=${{ env.IMAGE }}:cache
-          cache-to: type=registry,ref=${{ env.IMAGE }}:cache,mode=max
+          # [AUTO-SAVE] GHCR will automatically create the 'v2' tag if it doesn't exist.
+          tags: ${{ env.IMAGE }}
+          cache-from: type=registry,ref=${{ env.IMAGE }}-cache
+          cache-to: type=registry,ref=${{ env.IMAGE }}-cache,mode=max
 
       - name: Restore ccache
         uses: actions/cache@v4
         with:
           path: ccache
-          key: ccache-64-${{ github.event.inputs.scummvm_version || 'v2026.1.0' }}-${{ github.sha }}
+          key: ccache-64-${{ github.event.inputs.scummvm_version || 'v2026.2.0' }}-${{ github.sha }}
           restore-keys: |
-            ccache-64-${{ github.event.inputs.scummvm_version || 'v2026.1.0' }}-
+            ccache-64-${{ github.event.inputs.scummvm_version || 'v2026.2.0' }}-
             ccache-64-
 
       - name: Build ScummVM
         run: |
           mkdir -p output ccache
           docker run --rm \
-            -e SCUMMVM_VERSION=${{ github.event.inputs.scummvm_version || 'v2026.1.0' }} \
+            -e SCUMMVM_VERSION=${{ github.event.inputs.scummvm_version || 'v2026.2.0' }} \
             -v ${{ github.workspace }}/output:/output \
             -v ${{ github.workspace }}/ccache:/ccache \
-            ${{ env.IMAGE }}:latest
+            ${{ env.IMAGE }}
 
       - name: Upload binary
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          mv output/scummvm output/scummvm.64
-          gh release upload "beta-${{ github.ref_name }}" output/scummvm.64 --clobber
+          # [PACKAGE] Find the 7z package and upload it to the beta release tag.
+          FILE_PATH=$(ls output/scummvm.*.7z | head -n 1)
+          TAG="beta-${{ github.ref_name }}"
+          
+          if [ -f "$FILE_PATH" ]; then
+            echo "Uploading $FILE_PATH to release $TAG..."
+            gh release upload "$TAG" "$FILE_PATH" --clobber
+          else
+            echo "Error: Generated 7z file not found. Check build-64.sh logic."
+            exit 1
+          fi

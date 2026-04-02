@@ -1,8 +1,13 @@
 #!/bin/bash
 set -e
 
-SCUMMVM_VERSION="${SCUMMVM_VERSION:-v2026.1.0}"
+SCUMMVM_VERSION="${SCUMMVM_VERSION:-v2026.2.0}"
 OUTPUT_DIR="${OUTPUT_DIR:-/output}"
+
+# UPLOAD STRUCTURE
+EMU_DIR="$OUTPUT_DIR/Emu/SCUMMVM"
+LIB_DIR="$OUTPUT_DIR/Emu/SCUMMVM/libmini"
+LOGS_DIR="$OUTPUT_DIR/logs"
 
 echo "=== Building ScummVM ${SCUMMVM_VERSION} for Miyoo Mini (SDL1.2, --host=miyoomini) ==="
 
@@ -14,8 +19,11 @@ fi
 
 cd scummvm
 
+# Patch Directory
+PATCH_DIRS="/patches/common /patches/mini"
+
 # Apply patches
-for dir in /patches/common /patches/mini; do
+for dir in $PATCH_DIRS; do
     if [ -d "$dir" ] && ls "$dir"/*.patch 1>/dev/null 2>&1; then
         for patch in "$dir"/*.patch; do
             echo "Applying: $(basename "$patch")"
@@ -25,7 +33,7 @@ for dir in /patches/common /patches/mini; do
 done
 
 # Apply Python patches
-for dir in /patches/common /patches/mini; do
+for dir in $PATCH_DIRS; do
     if [ -d "$dir" ] && ls "$dir"/*.py 1>/dev/null 2>&1; then
         for patch in "$dir"/*.py; do
             echo "Applying: $(basename "$patch")"
@@ -49,52 +57,62 @@ export CCACHE_DIR="${CCACHE_DIR:-/ccache}"
     --enable-release \
     --enable-plugins --default-dynamic \
     --disable-detection-full \
-    --enable-fluidlite
+    --enable-fluidlite | tee configure_summary.txt
 
 # Build
 make -j$(nproc)
 
-# Output — binary + plugins + data
-mkdir -p "$OUTPUT_DIR"
+# OUTPUT STRUCTURE
+mkdir -p "$EMU_DIR/LICENSES" "$EMU_DIR/Theme" "$EMU_DIR/Extra" "$EMU_DIR/plugins"
+mkdir -p "$LIB_DIR"
+mkdir -p "$LOGS_DIR"
 
-# Binary
-cp scummvm "$OUTPUT_DIR/"
-arm-linux-gnueabihf-strip "$OUTPUT_DIR/scummvm"
+# Binary and Strip
+cp scummvm "$EMU_DIR/scummvm.mini"
+arm-linux-gnueabihf-strip "$EMU_DIR/scummvm.mini"
 
 # Plugins
-mkdir -p "$OUTPUT_DIR/plugins"
-cp plugins/*.so "$OUTPUT_DIR/plugins/"
-arm-linux-gnueabihf-strip "$OUTPUT_DIR/plugins/"*.so
+cp plugins/*.so "$EMU_DIR/plugins/"
+arm-linux-gnueabihf-strip "$EMU_DIR/plugins/"*.so
 
-# Themes
-mkdir -p "$OUTPUT_DIR/Theme"
-cp gui/themes/*.dat gui/themes/*.zip "$OUTPUT_DIR/Theme/"
+# Assets
+cp -f LICENSES/* "$EMU_DIR/LICENSES/"
+[ -f dists/soundfonts/COPYRIGHT.Roland_SC-55 ] && cp -f dists/soundfonts/COPYRIGHT.Roland_SC-55 "$EMU_DIR/LICENSES/"
+cp -f gui/themes/*.dat gui/themes/*.zip "$EMU_DIR/Theme/"
+cp -f dists/networking/wwwroot.zip "$EMU_DIR/Theme/"
+cp -f -r dists/engine-data/* "$EMU_DIR/Extra/"
+rm -rf "$EMU_DIR/Extra/patches"
+rm -rf "$EMU_DIR/Extra/testbed-audiocd-files"
+rm -f "$EMU_DIR/Extra/README"
+rm -f "$EMU_DIR/Extra/"*.mk
+rm -f "$EMU_DIR/Extra/"*.sh
+cp -f backends/vkeybd/packs/vkeybd_default.zip "$EMU_DIR/Extra/"
+cp -f backends/vkeybd/packs/vkeybd_small.zip "$EMU_DIR/Extra/"
+[ -f dists/soundfonts/Roland_SC-55.sf2 ] && cp -f dists/soundfonts/Roland_SC-55.sf2 "$EMU_DIR/Extra/"
 
-# Extra data
-mkdir -p "$OUTPUT_DIR/Extra"
-cp -r dists/engine-data/* "$OUTPUT_DIR/Extra/"
-rm -rf "$OUTPUT_DIR/Extra/patches" "$OUTPUT_DIR/Extra/testbed-audiocd-files"
-rm -f "$OUTPUT_DIR/Extra/README" "$OUTPUT_DIR/Extra/"*.mk "$OUTPUT_DIR/Extra/"*.sh
-
-# Virtual keyboard
-cp backends/vkeybd/packs/vkeybd_default.zip "$OUTPUT_DIR/Extra/"
-cp backends/vkeybd/packs/vkeybd_small.zip "$OUTPUT_DIR/Extra/"
-
-# Soundfont
-cp dists/soundfonts/Roland_SC-55.sf2 "$OUTPUT_DIR/Extra/" 2>/dev/null || true
+mkdir -p "$EMU_DIR/Extra/shaders"
+find engines/ -type f \( -name "*.fragment" -o -name "*.vertex" \) -exec cp -f {} "$EMU_DIR/Extra/shaders/" \;
 
 # Bundle shared libs not available on the Mini device
-LIBS_DIR="$OUTPUT_DIR/libs"
-mkdir -p "$LIBS_DIR"
 for lib in libjpeg.so.62 libvorbisfile.so.3 libvorbis.so.0 libogg.so.0 \
-           libgif.so.7 libtheoradec.so.1 libfluidlite.so; do
+           libgif.so.7 libtheoradec.so.1 libfluidlite.so libmad.so.0 \
+           libfribidi.so.0; do
     found=$(find "$SYSROOT" -name "${lib}*" -type f 2>/dev/null | head -1)
     if [ -n "$found" ]; then
-        cp "$found" "$LIBS_DIR/$lib"
+        cp -L "$found" "$LIB_DIR/$lib"
         echo "Bundled: $lib"
     else
         echo "WARNING: $lib not found in sysroot"
     fi
 done
 
-echo "=== Build complete ==="
+# Logs Collection
+cp -f configure_summary.txt config.log config.h config.mk "$LOGS_DIR/"
+
+cd "$OUTPUT_DIR"
+# Archive
+BUILD_DATE=$(date +%m%d)
+OUT_FILENAME="scummvm.mini.${BUILD_DATE}.7z"
+7z a -t7z -m0=lzma2 -mx=9 "$OUT_FILENAME" Emu/ logs/
+
+echo "=== Build complete: ${OUTPUT_DIR}/${OUT_FILENAME} ==="
