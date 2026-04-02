@@ -47,6 +47,9 @@ TOOLCHAIN=/opt/miyoomini-toolchain
 SYSROOT=$TOOLCHAIN/arm-linux-gnueabihf/libc
 export PATH="$TOOLCHAIN/bin:$SYSROOT/usr/bin:$PATH"
 export CXX="ccache arm-linux-gnueabihf-g++"
+export AR="arm-linux-gnueabihf-gcc-ar"
+export RANLIB="arm-linux-gnueabihf-gcc-ranlib"
+export NM="arm-linux-gnueabihf-gcc-nm"
 export CCACHE_DIR="${CCACHE_DIR:-/ccache}"
 
 # Configure using upstream --host=miyoomini
@@ -69,11 +72,11 @@ mkdir -p "$LOGS_DIR"
 
 # Binary and Strip
 cp scummvm "$EMU_DIR/scummvm.mini"
-arm-linux-gnueabihf-strip "$EMU_DIR/scummvm.mini"
+arm-linux-gnueabihf-strip -s "$EMU_DIR/scummvm.mini"
 
 # Plugins
 cp plugins/*.so "$EMU_DIR/plugins/"
-arm-linux-gnueabihf-strip "$EMU_DIR/plugins/"*.so
+arm-linux-gnueabihf-strip -s "$EMU_DIR/plugins/"*.so
 
 # Assets
 cp -f LICENSES/* "$EMU_DIR/LICENSES/"
