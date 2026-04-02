@@ -47,7 +47,13 @@ TOOLCHAIN=/opt/miyoomini-toolchain
 SYSROOT=$TOOLCHAIN/arm-linux-gnueabihf/libc
 export PATH="$TOOLCHAIN/bin:$SYSROOT/usr/bin:$PATH"
 export CXX="ccache arm-linux-gnueabihf-g++"
+export AR="arm-linux-gnueabihf-gcc-ar"
+export RANLIB="arm-linux-gnueabihf-gcc-ranlib"
+export NM="arm-linux-gnueabihf-gcc-nm"
 export CCACHE_DIR="${CCACHE_DIR:-/ccache}"
+
+export CXXFLAGS="-O3 -ffunction-sections -fdata-sections -flto=auto"
+export LDFLAGS="-Wl,--gc-sections -flto=auto"
 
 # Configure using upstream --host=miyoomini
 # This sets SDL1.2, miyoo backend, MIYOOMINI define, correct CPU flags,
@@ -69,11 +75,11 @@ mkdir -p "$LOGS_DIR"
 
 # Binary and Strip
 cp scummvm "$EMU_DIR/scummvm.mini"
-arm-linux-gnueabihf-strip "$EMU_DIR/scummvm.mini"
+arm-linux-gnueabihf-strip -s "$EMU_DIR/scummvm.mini"
 
 # Plugins
 cp plugins/*.so "$EMU_DIR/plugins/"
-arm-linux-gnueabihf-strip "$EMU_DIR/plugins/"*.so
+arm-linux-gnueabihf-strip -s "$EMU_DIR/plugins/"*.so
 
 # Assets
 cp -f LICENSES/* "$EMU_DIR/LICENSES/"

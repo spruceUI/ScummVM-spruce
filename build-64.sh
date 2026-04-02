@@ -51,7 +51,11 @@ export PKG_CONFIG_PATH="/usr/lib/aarch64-linux-gnu/pkgconfig"
 export PKG_CONFIG_LIBDIR="/usr/lib/aarch64-linux-gnu/pkgconfig"
 export CCACHE_DIR="${CCACHE_DIR:-/ccache}"
 
-# Configure for universal 64-bit: SDL2 + OpenGL ES2, all engines
+export CFLAGS="-O3 -ffunction-sections -fdata-sections -flto=auto"
+export CXXFLAGS="$CFLAGS"
+export LDFLAGS="-Wl,--gc-sections -flto=auto"
+
+# Configure without optimization flags so probe tests work correctly
 ./configure \
     --host=aarch64-linux-gnu \
     --backend=sdl \
@@ -75,7 +79,7 @@ mkdir -p "$LOGS_DIR"
 
 # Binary and Strip
 cp scummvm "$EMU_DIR/scummvm.64"
-aarch64-linux-gnu-strip "$EMU_DIR/scummvm.64"
+aarch64-linux-gnu-strip -s "$EMU_DIR/scummvm.64"
 
 # Assets
 cp -f LICENSES/* "$EMU_DIR/LICENSES/"

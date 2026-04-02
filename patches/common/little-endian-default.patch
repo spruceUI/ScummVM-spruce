@@ -1,0 +1,23 @@
+diff --git a/configure b/configure
+index 4883e91e033..35fc1b9a44d 100755
+--- a/configure
++++ b/configure
+@@ -2801,7 +2801,7 @@ if $_strings $TMPO$HOSTEXEEXT 2>> "$TMPLOG"| grep -q BIGenDianSyS; then
+ elif $_strings $TMPO$HOSTEXEEXT 2>> "$TMPLOG" | grep -q LiTTleEnDian; then
+ 	_endian=little
+ fi
+-echo $_endian
++echo "$_endian (default: little)"
+ cc_check_clean tmp_endianness_check.cpp $TMPO-tmp_endianness_check.dwo tmp_endianness_check.dwo
+ 
+ case $_endian in
+@@ -2814,7 +2814,8 @@ case $_endian in
+ 		add_line_to_config_h '#undef SCUMM_BIG_ENDIAN'
+ 		;;
+ 	*)
+-		exit 1
++		add_line_to_config_h '#define SCUMM_LITTLE_ENDIAN'
++		add_line_to_config_h '#undef SCUMM_BIG_ENDIAN'
+ 		;;
+ esac
+ 
