@@ -99,6 +99,15 @@ RUN cd /tmp && \
     make -j$(nproc) && make install && \
     rm -rf /tmp/FluidLite
 
+
+# libmpeg2
+RUN cd /tmp && \
+    git clone --depth 1 https://github.com/cisco-open-source/libmpeg2.git && \
+    cd libmpeg2 && \
+    ./configure --host=arm-linux-gnueabihf --prefix=$SYSROOT/usr --disable-static --enable-shared && \
+    make -j$(nproc) && make install && \
+    rm -rf /tmp/libmpeg2
+
 # TODO: libmpeg2 — sourceforge/debian mirrors unreliable, only needed for 2 engines
 # (Alcachofa, QD Engine). Add later when we find a reliable source.
 
