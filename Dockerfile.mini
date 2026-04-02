@@ -99,6 +99,16 @@ RUN cd /tmp && \
     make -j$(nproc) && make install && \
     rm -rf /tmp/FluidLite
 
+
+# libmpeg2
+RUN cd /tmp && \
+    git clone --depth 1 https://github.com/cisco-open-source/libmpeg2.git && \
+    cd libmpeg2 && \
+    ./configure --host=arm-linux-gnueabihf --prefix=$SYSROOT/usr --disable-static --enable-shared && \
+    make -j$(nproc) && make install && \
+    rm -rf /tmp/libmpeg2
+
+
 COPY build-mini.sh /build-mini.sh
 RUN chmod +x /build-mini.sh
 COPY patches/ /patches/
