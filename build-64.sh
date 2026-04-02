@@ -4,7 +4,7 @@ set -e
 SCUMMVM_VERSION="${SCUMMVM_VERSION:-v2026.2.0}"
 OUTPUT_DIR="${OUTPUT_DIR:-/output}"
 
-# UPLOAD STRUCTURE 
+# UPLOAD STRUCTURE
 EMU_DIR="$OUTPUT_DIR/Emu/SCUMMVM"
 LIB_DIR="$OUTPUT_DIR/lib"
 LOGS_DIR="$OUTPUT_DIR/logs"
@@ -55,7 +55,7 @@ export CFLAGS="-O3 -ffunction-sections -fdata-sections -flto=auto"
 export CXXFLAGS="$CFLAGS"
 export LDFLAGS="-Wl,--gc-sections -flto=auto"
 
-# Configure without optimization flags so probe tests work correctly
+# Configure for universal ARM64: SDL2 + OpenGL ES 2.0, all game engines
 ./configure \
     --host=aarch64-linux-gnu \
     --backend=sdl \
@@ -74,7 +74,7 @@ make -j$(nproc)
 
 # OUTPUT STRUCTURE
 mkdir -p "$EMU_DIR/LICENSES" "$EMU_DIR/Theme" "$EMU_DIR/Extra"
-mkdir -p "$LIB_DIR" 
+mkdir -p "$LIB_DIR"
 mkdir -p "$LOGS_DIR"
 
 # Binary and Strip
