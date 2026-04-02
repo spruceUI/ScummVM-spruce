@@ -52,7 +52,7 @@ export RANLIB="arm-linux-gnueabihf-gcc-ranlib"
 export NM="arm-linux-gnueabihf-gcc-nm"
 export CCACHE_DIR="${CCACHE_DIR:-/ccache}"
 
-export CXXFLAGS="-O3 -mcpu=cortex-a7 -ffunction-sections -fdata-sections -flto=auto"
+export CXXFLAGS="-O3 -ffunction-sections -fdata-sections -flto=auto"
 export LDFLAGS="-Wl,--gc-sections -flto=auto"
 
 # Configure using upstream --host=miyoomini
