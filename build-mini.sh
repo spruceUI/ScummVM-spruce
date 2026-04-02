@@ -96,7 +96,7 @@ find engines/ -type f \( -name "*.fragment" -o -name "*.vertex" \) -exec cp -f {
 # Bundle shared libs not available on the Mini device
 for lib in libjpeg.so.62 libvorbisfile.so.3 libvorbis.so.0 libogg.so.0 \
            libgif.so.7 libtheoradec.so.1 libfluidlite.so libmad.so.0 \
-           libfribidi.so.0; do
+           libfribidi.so.0 libmpeg2.so.0 libmpeg2convert.so.0; do
     found=$(find "$SYSROOT" -name "${lib}*" -type f 2>/dev/null | head -1)
     if [ -n "$found" ]; then
         cp -L "$found" "$LIB_DIR/$lib"
